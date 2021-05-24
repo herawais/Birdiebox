@@ -91,6 +91,11 @@ class BulkSaleCreateLine(models.Model):
         'account.tax',
         string='Taxes',
         domain=['|', ('active', '=', False), ('active', '=', True)])
+    route_id = fields.Many2one('stock.location.route',
+                               string='Route',
+                               domain=[('sale_selectable', '=', True)],
+                               ondelete='restrict',
+                               check_company=True)
 
     @api.depends('product_uom_qty', 'price_unit')
     def _compute_amount(self):

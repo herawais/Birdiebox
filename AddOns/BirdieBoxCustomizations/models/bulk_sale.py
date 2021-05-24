@@ -20,21 +20,29 @@ class BulkSale(models.Model):
     country = fields.Char(string="Country", required=True)
     email = fields.Char(string="E-Mail")
     phone = fields.Char(string="Phone")
+    initials = fields.Char(string="Initials")
+    box_name = fields.Char(string="Box Name")
+    monogram = fields.Char(string="Monogram")
     parent_sale_order = fields.Char(string="Parent Sale Order", required=True)
-    sale_order_created = fields.Boolean(string="Sale Order Created?")
+    sale_order_created = fields.Boolean(string="Sale Order Created?",
+                                        readonly=True)
     created_sale_order = fields.Many2one('sale.order',
                                          string="Created Sale Order",
-                                         ondelete='set null')
+                                         ondelete='set null',
+                                         readonly=True)
     state_id = fields.Many2one("res.country.state",
                                string='State ID',
                                ondelete='restrict',
-                               domain="[('country_id', '=?', country_id)]")
+                               domain="[('country_id', '=?', country_id)]",
+                               readonly=True)
     country_id = fields.Many2one('res.country',
                                  string='Country ID',
-                                 ondelete='restrict')
+                                 ondelete='restrict',
+                                 readonly=True)
     parent_sale_order_id = fields.Many2one('sale.order',
                                            string="Parent Sale Order ID",
-                                           ondelete='restrict')
+                                           ondelete='restrict',
+                                           readonly=True)
 
     def create_partner(self):
         COUNTRY = self.env['res.country']
@@ -112,11 +120,40 @@ class BulkSale(models.Model):
                 if not parent_order:
                     raise ValidationError(
                         'The parent sales order could not be found for ' +
-                        self.name + '.')
+                        record.name + '.')
                 else:
                     record.parent_sale_order_id = parent_order
 
-            partner = self.create_partner()
+            for line in create_order_lines:
+                if not line.x_studio_customization_notes:
+                    if line.x_studio_customization_detail == 'Initial':
+                        if not record.initials:
+                            raise ValidationError(
+                                line.x_studio_customization_detail +
+                                ' selected but no "Initials" were imported for '
+                                + record.name + '.')
+                        else:
+                            line.x_studio_customization_notes = record.initials
+                    elif line.x_studio_customization_detail in [
+                            'Full Name', 'Logo and Name'
+                    ]:
+                        if not record.box_name:
+                            raise ValidationError(
+                                line.x_studio_customization_detail +
+                                ' selected but no "Box Name" imported for ' +
+                                record.name + '.')
+                        else:
+                            line.x_studio_customization_notes = record.box_name
+                    elif line.x_studio_customization_detail == 'First Letter and Name':
+                        if not record.monogram:
+                            raise ValidationError(
+                                line.x_studio_customization_detail +
+                                ' selected but no "Monogram" imported for ' +
+                                record.name + '.')
+                        else:
+                            line.x_studio_customization_notes = record.monogram
+
+            partner = record.create_partner()
             so = record.parent_sale_order_id
             order_lines = []
 
@@ -130,6 +167,7 @@ class BulkSale(models.Model):
                         "x_studio_customization_notes":
                         line.x_studio_customization_notes,
                         "price_unit": line.price_unit,
+                        "route_id": line.route_id.id,
                         "tax_id": line.tax_id.id,
                         "product_uom_qty": line.product_uom_qty
                     }))

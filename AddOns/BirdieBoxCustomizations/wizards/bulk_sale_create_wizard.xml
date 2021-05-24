@@ -38,13 +38,14 @@
         <div class="alert alert-danger" attrs="{'invisible': [('unique_found_sales_orders', '!=', 0)]}">
             <b>Could not find any matching Parent Sale Orders</b>
         </div>
-        <group attrs="{'invisible': ['|', ('unique_entered_sales_orders', '!=', 1),('unique_found_sales_orders', '!=', 1)]}">
+        <group attrs="{'invisible': ['|', ('unique_entered_sales_orders', '!=', 1),('unique_found_sales_orders', '!=', 1)]}" style="width: 100%;">
           <field name="product_line" widget="one2many" nolabel="1" style="width: 100%;" options="{'no_create': True}">
             <tree string="Order Lines" editable="top">
               <field name="product_id"   />
-              <field name="name" readonly="1" />
+              <field name="name" readonly="1" invisible="1"/>
               <field name="x_studio_customization_detail" />
               <field name="x_studio_customization_notes"  />
+              <field name="route_id" options="{'no_create': True}"/>
               <field name="product_uom_qty" />
               <field name="price_unit" />
               <!-- <field name="tax_id" readonly="1" /> -->

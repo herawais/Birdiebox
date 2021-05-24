@@ -23,6 +23,9 @@
                 <field name="country" />
                 <field name="phone" />
                 <field name="email" />
+                <field name="initials" />
+                <field name="box_name" />
+                <field name="monogram" />
                 <field name="parent_sale_order" />
             </group>
             <group>

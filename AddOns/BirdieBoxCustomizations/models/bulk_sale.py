@@ -58,11 +58,11 @@ class BulkSale(models.Model):
         else:
             if self.country.upper() in ['US', 'USA']:
                 self.country = 'United States'
-                country = COUNTRY.search([
-                    '|', ('name', 'ilike', self.country),
-                    ('code', 'ilike', self.country)
-                ],
-                                         limit=1)
+            country = COUNTRY.search([
+                '|', ('name', 'ilike', self.country),
+                ('code', 'ilike', self.country)
+            ],
+                                     limit=1)
 
             if not country:
                 raise ValidationError(

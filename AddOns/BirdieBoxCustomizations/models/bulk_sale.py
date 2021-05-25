@@ -61,6 +61,13 @@ class BulkSale(models.Model):
                 ('code', 'ilike', self.country)
             ])
 
+            if not country:
+                raise ValidationError(
+                    'The entered country could not be found for ' + self.name +
+                    '.')
+            else:
+                self.country_id = country
+
             if self.state.upper() == 'VIRGINIA':
                 self.state = 'VA'
 
@@ -80,13 +87,6 @@ class BulkSale(models.Model):
                     '.')
             else:
                 self.state_id = state
-
-            if not country:
-                raise ValidationError(
-                    'The entered country could not be found for ' + self.name +
-                    '.')
-            else:
-                self.country_id = country
 
             partner_body = {
                 "name": self.name,

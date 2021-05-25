@@ -63,7 +63,7 @@ class BulkSale(models.Model):
                 ('code', 'ilike', self.country)
             ],
                                      limit=1)
-
+            #
             if not country:
                 raise ValidationError(
                     'The entered country could not be found for ' + self.name +

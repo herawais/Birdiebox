@@ -16,14 +16,6 @@
     <field name="model">bulk.sale.create</field>
     <field name="arch" type="xml">
       <form string="Bulk Sales Create">
-        <!-- <script>
-            $(document).ready(function(){
-                $('.modal').css({'width': '100vw', margin: 'auto'});
-                $('.modal-dialog').css({'width': '100vw', margin: 'auto'});
-                $('.modal-content').css({'width': '80vw', margin:'auto'});
-                $('.modal-body').css({'width': '80vw'});
-            });
-        </script> -->
         <field name="unique_entered_sales_orders" readonly="1" invisible="1"/>
         <field name="unique_found_sales_orders" readonly="1" invisible="1"/>
         <p class="oe_grey" attrs="{'invisible': ['|', ('unique_found_sales_orders', '&gt;', 1),('unique_entered_sales_orders', '&gt;', 1)]}">

@@ -1,0 +1,21 @@
+<odoo>
+  <record model="ir.ui.view" id="view_sale_order_form_customization">
+    <field name="name">Sale Order Form Customization</field>
+    <field name="model">sale.order</field>
+    <field name="inherit_id" ref="sale.view_order_form"/>
+    <field name="arch" type="xml">
+        <xpath expr="//button[@name='action_confirm']" position="replace">
+            <button name="action_confirm" id="action_confirm"
+                        string="Confirm" class="btn-primary" type="object"
+                        attrs="{'invisible': ['|', ('state', 'not in', ['sent']),('x_studio_shipping_type', 'in',  ['Individual', 'Bulk Freight and Individual', 'Bulk Ground and Individual'])]}"/>
+            <button name="action_confirm"
+                string="Confirm" type="object"
+                attrs="{'invisible': ['|', ('state', 'not in', ['draft']), ('x_studio_shipping_type', 'in',  ['Individual', 'Bulk Freight and Individual', 'Bulk Ground and Individual'])]}"/>
+            <field name="x_studio_shipping_type" invisible="1" />
+            <button name="custom_action_done"
+                string="Confirm" type="object"
+                attrs="{'invisible': ['|', ('state', 'not in', ['draft']), ('x_studio_shipping_type', 'not in', ['Individual', 'Bulk Freight and Individual', 'Bulk Ground and Individual'])]}"/>
+        </xpath>
+    </field>
+  </record>   
+</odoo>

@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<odoo>
+    <record id="bulk_create_so_wizard_action" model="ir.actions.act_window">
+        <field name="name">Create Sale Orders</field>
+        <field name="type">ir.actions.act_window</field>
+        <field name="res_model">bulk.sale.create</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+        <field name="binding_model_id" ref="BirdieBoxCustomizations.model_bulk_sale" />
+        <field name="binding_view_types">list</field>
+    </record>
+  
+
+  <record id="bulk_create_so_wizard_view" model="ir.ui.view">
+    <field name="name">Create Sale Orders Form</field>
+    <field name="model">bulk.sale.create</field>
+    <field name="arch" type="xml">
+      <form string="Bulk Sales Create">
+        <field name="unique_entered_sales_orders" readonly="1" invisible="1"/>
+        <field name="unique_found_sales_orders" readonly="1" invisible="1"/>
+        <p class="oe_grey" attrs="{'invisible': ['|', ('unique_found_sales_orders', '&gt;', 1),('unique_entered_sales_orders', '&gt;', 1)]}">
+          Creating Bulk Sales orders for <field name="parent_sale_order_id" nolabel="1" readonly="1"/>.
+        </p>
+
+        <div class="alert alert-danger" attrs="{'invisible': ['|', ('unique_entered_sales_orders', '&lt;', 2),('unique_found_sales_orders', '=', 0)]}">
+            <b>Found Multiple Sales Orders</b><br/><br/>
+            
+            <span>Please Cancel and Select only the same Parent Sale Orders</span>
+        </div>
+        <div class="alert alert-danger" attrs="{'invisible': [('unique_found_sales_orders', '!=', 0)]}">
+            <b>Could not find any matching Parent Sale Orders</b>
+        </div>
+        <group attrs="{'invisible': ['|', ('unique_entered_sales_orders', '!=', 1),('unique_found_sales_orders', '!=', 1)]}" style="width: 100%;">
+          <field name="product_line" widget="one2many" nolabel="1" style="width: 100%;" options="{'no_create': True}">
+            <tree string="Order Lines" editable="top">
+              <field name="product_id"   />
+              <field name="name" readonly="1" invisible="1"/>
+              <field name="x_studio_customization_detail" />
+              <field name="x_studio_customization_notes"  />
+              <field name="route_id" options="{'no_create': True}"/>
+              <field name="product_uom_qty" />
+              <field name="price_unit" />
+              <!-- <field name="tax_id" readonly="1" /> -->
+              <field name="price_subtotal" readonly="1" /> 
+            </tree>
+          </field>
+        </group>
+        <footer>
+          <button type="object" name="create_many" string="Create All"  class="btn-primary" attrs="{'invisible': ['|', ('unique_entered_sales_orders', '!=', 1),('unique_found_sales_orders', '!=', 1)]}"/>
+          <button special="cancel" string="Cancel"  class="btn-secondary" />
+        </footer>
+      </form>
+    </field>
+  </record>
+</odoo>

@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+
+  <record model="ir.ui.view" id="view_bulk_sale_form">
+    <field name="name">bulk.sales.order.form</field>
+    <field name="model">bulk.sale</field>
+    <field name="arch" type="xml">
+      <form string="Bulk Order">
+        <sheet>
+          <div class="oe_title">
+              <h1>
+                  <field name="name" />
+              </h1>
+          </div>
+          <group>
+            <group>
+                <field name="street" />
+                <field name="street2" />
+                <field name="zip" />
+                <field name="city" />
+                <field name="state" />
+                <field name="country" />
+                <field name="phone" />
+                <field name="email" />
+                <field name="initials" />
+                <field name="box_name" />
+                <field name="monogram" />
+                <field name="parent_sale_order" />
+            </group>
+            <group>
+              <field name="sale_order_created" readonly="1" />
+              <field name="created_sale_order" readonly="1" />
+              <field name="state_id" readonly="1"/>
+              <field name="country_id" readonly="1"/>
+              <field name="parent_sale_order_id" readonly="1"/>
+            </group>
+          </group>
+        </sheet>
+      </form>
+    </field>
+  </record> 
+
+  <record model="ir.ui.view" id="bulk_sale_list">
+    <field name="name">Bulk sale List</field>
+    <field name="model">bulk.sale</field>
+    <field name="arch" type="xml">
+      <tree>
+        <field name="parent_sale_order" />
+        <field name="name" />
+        <field name="zip" />
+        <field readonly="1" name="sale_order_created" widget="toggle_button"/>
+      </tree>
+    </field>
+  </record>
+
+
+  <record model="ir.ui.view" id="bulk_sale_search">
+    <field name="name">Bulk sale search</field>
+    <field name="model">bulk.sale</field>
+    <field name="mode">primary</field>
+    <field name="arch" type="xml">
+      <search string="Bulk Sales">
+        <field name="sale_order_created"/>
+        <field name="parent_sale_order" />
+        <field name="name" />
+        <field name="street" />
+        <field name="street2" />
+        <field name="zip" />
+        <field name="city" />
+        <field name="state" />
+        <field name="country" />
+        <filter string="Pending Creation" name="pending_creation" domain="[('sale_order_created', '=', False)]"/>
+        <filter string="Created" name="created" domain="[('sale_order_created', '=', True)]"/>
+        <filter name="group_by_so" string="By Sales Order" context="{'group_by': 'parent_sale_order'}"/>
+      </search>
+    </field>
+  </record>
+
+  <record model="ir.actions.act_window" id="bulk_sale_window">
+    <field name="name">Bulk SO Import</field>
+    <field name="res_model">bulk.sale</field>
+    <field name="view_mode">tree,form</field>
+    <field name="context">{'search_default_pending_creation': 1 }</field>
+  </record>
+
+  <menuitem name="Bulk Import" id="bulk_sale_config_menu" parent="sale.sale_order_menu" action="BirdieBoxCustomizations.bulk_sale_window"/>
+
+</odoo>        

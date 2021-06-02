@@ -19,7 +19,8 @@
     'depends': ['repair'],
     'data': [
         'security/ir.model.access.csv', 'views/bulk_sale.xml',
-        'views/sale_order.xml', 'wizards/bulk_sale_create_wizard.xml'
+        'views/sale_order.xml', 'wizards/bulk_sale_create_wizard.xml',
+        'views/report_stock_forecasted.xml'
     ],
     'application':
     True,

@@ -11,6 +11,8 @@ class CustomSaleOrder(models.Model):
     _name = 'sale.order'
     _inherit = 'sale.order'
 
-    def custom_action_done(self):
-        for record in self:
-            record.state = 'sale'
+    def action_confirm(self):
+        if self.x_studio_shipping_type in ['Individual', 'Bulk Freight and Individual', 'Bulk Ground and Individual'] and not self.x_studio_related_sales_order:
+           self.state = 'sale'
+        else:
+            return super(CustomSaleOrder, self).action_confirm()

@@ -1,872 +1,70 @@
-from odoo import api, fields, models, _
-import requests
 import json
-from odoo.exceptions import UserError, ValidationError
 import logging
 from datetime import datetime
+import requests
+from odoo import api, fields, models, _
+from odoo.exceptions import UserError, Warning
 
 _logger = logging.getLogger(__name__)
 
 
-class ResCountry(models.Model):
-    _inherit = "res.country"
+class ResPartnerCustomization(models.Model):
+    _inherit = 'res.partner'
 
-    @api.model
-    def get_country_ref(self, country_name):
-        """
-        This method take country name as an argument and return county id
-        :param country_name: name of the country
-        :rtype int: return a recordset id
-        """
-        try:
-            country = None
-            if country_name:
-                country = self.search([('name', '=', country_name)], limit=1)
-                return country.id
-            else:
-                _logger.info('Country not found in odoo')
-                return False
-            # print('\n\n\n\n\nCurrent country : ', country)
-        except Exception:
-            return False
+    x_salesforce_id = fields.Char('SalesForce ID',copy=False)
+    x_salesforce_exported = fields.Boolean('Exported To Salesforce', default=False,copy=False)
+    x_is_updated = fields.Boolean('x_is_updated', default=False,copy=False)
+    x_last_modified_on = fields.Datetime("SF last Modified.",copy=False)
 
+    ''' For Update Version '''
 
-class ResCountryState(models.Model):
-    _inherit = "res.country.state"
-
-    @api.model
-    def get_state_ref(self, state_name, country_name):
-        """
-        This method take state name as an argument and return state id
-        :param state_name: name of state
-        :param country_name: name of country
-        :rtype int: return a recordset id
-        """
-        try:
-            if state_name:
-                _logger.info(_("QBO State : %s" % (state_name)))
-                _logger.info(_("QBO Country : %s" % (country_name)))
-
-                country_id = self.env['res.country'].get_country_ref(country_name)
-                if not country_id:
-                    context = self._context.get('params').get('id')
-                    company = self.env['res.company'].search([('id', '=', context)])
-                    country_id = company.country_id.id
-                state = self.search([('name', '=', state_name), ('country_id', '=', country_id)], limit=1)
-                # print('\n\n\n\n\n state1 : ', state)
-                if not state:
-                    state_name = state_name.upper()
-                    state = self.search([('code', '=', state_name), ('country_id', '=', country_id)], limit=1)
-                    # print('\n\n\n\n\n state1 : ', state)
-                    _logger.info("State not found in Odoo for received company")
-                    # state = self.create({'name': state_name, 'country_id': country_id, 'code': state_name})
-
-                if not state:
-                    return False
+    # @api.multi
+    def write(self, vals):
+        if vals:
+            if 'x_last_modified_on' in vals.keys():
+                if vals['x_last_modified_on']:
+                    vals['x_is_updated'] = True
                 else:
-                    return state.id
+                    vals['x_is_updated'] = False
             else:
-                return False
-        except Exception:
-            return False
+                vals['x_is_updated'] = False
 
-class ResPartner(models.Model):
-    _inherit = "res.partner"
-
-    qbo_vendor_id = fields.Char("QBO Vendor Id", copy=False, help="QuickBooks database recordset id")
-    qbo_customer_id = fields.Char("QBO Customer Id", copy=False, help="QuickBooks database recordset id")
-    x_quickbooks_exported = fields.Boolean("Exported to Quickbooks ? ", default=False)
-    x_quickbooks_updated = fields.Boolean("Updated in Quickbook ?", default=False)
-
-    ''' For Import Partner'''
-    
-    @api.model
-    def create(self, vals):
-        if 'res_partner_search_mode' in self._context and self._context.get('res_partner_search_mode') == 'customer':
-            vals['customer_rank'] = 1
-        if 'res_partner_search_mode' in self._context and self._context.get('res_partner_search_mode') == 'supplier':
-            vals['supplier_rank'] = 1
-        res = super(ResPartner, self).create(vals)
+        res = super(ResPartnerCustomization, self).write(vals)
         return res
 
-    @api.model
-    def attachCustomerTitle(self, title):
-        res_partner_tile = self.env['res.partner.title']
-        title_id = False
-        if title:
-            title_id = res_partner_tile.search([('name', '=', title)], limit=1)
-            if not title_id:
-                ''' Create New Title in Odoo '''
-                create_id = res_partner_tile.create({'name': title})
-                # create_id = title_id.id
-                if create_id:
-                    return create_id.id
-            return title_id.id
-
-    @api.model
-    def get_parent_customer_ref(self, qbo_parent_id):
-        company = self.env['res.users'].search([('id', '=', 2)]).company_id
-        partner = self.search([('qbo_customer_id', '=', qbo_parent_id)], limit=1)
-        if not partner:
-            url_str = company.get_import_query_url()
-            url = url_str.get('url') + '/customer/' + qbo_parent_id
-            data = requests.request('GET', url, headers=url_str.get('headers'))
-            if data.status_code == 200:
-                partner = self.create_partner(data, is_customer=True)
-        return partner.id
-
-    @api.model
-    def get_parent_vendor_ref(self, qbo_parent_id):
-        company = self.env['res.users'].search([('id', '=', 2)]).company_id
-        partner = self.search([('qbo_vendor_id', '=', qbo_parent_id)], limit=1)
-        if not partner:
-            url_str = company.get_import_query_url()
-            url = url_str.get('url') + '/vendor/' + qbo_parent_id
-            data = requests.request('GET', url, headers=url_str.get('headers'))
-            if data.status_code == 200:
-                partner = self.create_partner(data, is_vendor=True)
-        return partner.id
-
-    @api.model
-    def _prepare_partner_dict(self, partner, is_customer=False, is_vendor=False):
-
-        vals = {
-            'company_type': 'person' if partner.get('Job') else 'company',
-            # 'name': partner.get('DisplayName'),
-            'qbo_customer_id': partner.get('Id') if is_customer else '',
-            'qbo_vendor_id': partner.get('Id') if is_vendor else '',
-            # 'customer': is_customer,
-            # 'supplier': is_vendor,
-            'email': partner.get('PrimaryEmailAddr').get('Address') if partner.get('PrimaryEmailAddr') else '',
-            'phone': partner.get('PrimaryPhone').get('FreeFormNumber') if partner.get('PrimaryPhone') else '',
-            'mobile': partner.get('Mobile').get('FreeFormNumber') if partner.get('Mobile') else '',
-            'website': partner.get('WebAddr').get('URI') if partner.get('WebAddr') else '',
-            'active': partner.get('Active'),
-            'comment': partner.get('Notes'),
-        }
-        if is_customer:
-            vals.update({'customer_rank': 1})
-        if is_vendor:
-            vals.update({'supplier_rank': 1})
-        if partner.get('GivenName'):
-            vals.update({'name': partner.get('GivenName')})
-        if partner.get('MiddleName'):
-            vals.update({'name': partner.get('MiddleName')})
-        if partner.get('FamilyName'):
-            vals.update({'name': partner.get('FamilyName')})
-        if partner.get('GivenName') and partner.get('MiddleName'):
-            vals.update({'name': partner.get('GivenName') + ' ' + partner.get('MiddleName')})
-        if partner.get('MiddleName') and partner.get('FamilyName'):
-            vals.update({'name': partner.get('MiddleName') + ' ' + partner.get('FamilyName')})
-        if partner.get('GivenName') and partner.get('FamilyName'):
-            vals.update({'name': partner.get('GivenName') + ' ' + partner.get('FamilyName')})
-        if partner.get('GivenName') and partner.get('MiddleName') and partner.get('FamilyName'):
-            vals.update(
-                {'name': partner.get('GivenName') + ' ' + partner.get('MiddleName') + ' ' + partner.get('FamilyName')})
-
-        if partner.get('DisplayName'):
-            vals.update({'name': partner.get('DisplayName')})
-
-        if partner.get('Title'):
-            ''' If Title is present then first check in odoo if title exists or not
-            if exists attach Id of tile else create new and attach its ID'''
-
-            title = self.attachCustomerTitle(partner.get('Title'))
-            vals.update({'title': title})
-        
-        #Checking for Account Receivable and Account Payable
-        company = self.env['res.users'].search([('id', '=', 2)]).company_id
-        if company.qb_account_recievable and company.qb_account_payable:
-            vals.update({'property_account_receivable_id' :company.qb_account_recievable.id ,
-                         'property_account_payable_id':company.qb_account_payable.id
-                         })
-        else:
-            _logger.info("Account Payable or Receivable is not set!")
-            raise ValidationError(_("""It seems that Account Payable or Account Receivable is not set.
-            Please navigate to Settings ---> Companies --->Quickbooks Tab.
-            Under QB Account Configuration,please set Account Receivable and Account Payable.
-             """))
-
-        if 'BillAddr' in partner and partner.get('BillAddr'):
-            address_vals = {
-                'street': partner.get('BillAddr').get('Line1') or '',
-                'street2': partner.get('BillAddr').get('Line2') or '',
-                'city': partner.get('BillAddr').get('City') or '',
-                'zip': partner.get('BillAddr').get('PostalCode') or '',
-                'state_id': self.env['res.country.state'].get_state_ref(
-                    partner.get('BillAddr').get('CountrySubDivisionCode'),
-                    partner.get('BillAddr').get('Country')) if partner.get('BillAddr').get(
-                    'CountrySubDivisionCode') else False,
-                'country_id': self.env['res.country'].get_country_ref(
-                    partner.get('BillAddr').get('Country'))  if partner.get('BillAddr').get('Country') else False,
-            }
-            # print('\n\n\n\n\nDict : ',address_vals)
-            vals.update(address_vals)
-
-        # if 'ParentRef' in partner:
-        #     if is_customer:
-        #         vals.update({'parent_id': self.get_parent_customer_ref(partner.get('ParentRef').get('value'))})
-        #     if is_vendor:
-        #         vals.update({'parent_id': self.get_parent_vendor_ref(partner.get('ParentRef').get('value'))})
-
-        return vals
-
-    @api.model
-    def create_partner(self, data, is_customer=False, is_vendor=False):
-        """Create partner object in odoo
-        :param data: partner object response return by QBO
-        :param is_customer: True if partner is a customer
-        :param is_vendor: True if partener is a supplier/vendor
-        :return int: last import QBO customer or vendor Id
-        """
-        res = json.loads(str(data.text))
-        brw_partner = False
-        if is_customer:
-            if 'QueryResponse' in res:
-                partners = res.get('QueryResponse').get('Customer', [])
-            else:
-                partners = [res.get('Customer')] or []
-        elif is_vendor:
-            if 'QueryResponse' in res:
-                partners = res.get('QueryResponse').get('Vendor', [])
-            else:
-                partners = [res.get('Vendor')] or []
-        else:
-            partners = []
-
-        _logger.info(_('\n\nQbo Dict : %s'% partners))
-
-        if len(partners) == 0 :
-            raise UserError("It seems that all of the Customers/Vendors are already imported.")
-        for partner in partners:
-            vals = self._prepare_partner_dict(partner, is_customer=is_customer, is_vendor=is_vendor)
-            print("\n\n\npartner  : ", partner, '\n\n\n\n')
-            _logger.info("VALS FOUND OUT IS !!!!!!!!!!!!---> {}".format(vals))
-            brw_partner = self.search([('qbo_customer_id', '=', partner.get('Id'))], limit=1)
-            _logger.info("Browsing partner************ {}".format(brw_partner))
-            if not brw_partner:
-                _logger.info("Customer needs to be created$$$$$$$$$$$$$$$$$$${}".format(vals))
-                brw_partner = self.search([('qbo_vendor_id', '=', partner.get('Id'))], limit=1)
-                if not brw_partner:
-                    brw_partner = self.create(vals)
-                    if 'BillAddr' in partner and partner.get('BillAddr'):
-                        address_vals = {
-                            'street': partner.get('BillAddr').get('Line1') or '',
-                            'street2': partner.get('BillAddr').get('Line2') or '',
-                            'city': partner.get('BillAddr').get('City') or '',
-                            'zip': partner.get('BillAddr').get('PostalCode') or '',
-                            'state_id': self.env['res.country.state'].get_state_ref(
-                                partner.get('BillAddr').get('CountrySubDivisionCode'),
-                                partner.get('BillAddr').get('Country')) if partner.get('BillAddr').get(
-                                'CountrySubDivisionCode') else False,  #  and partner.get('BillAddr').get('Country')
-                            'country_id': self.env['res.country'].get_country_ref(
-                                partner.get('BillAddr').get('Country')) if partner.get('BillAddr').get('Country') else False,  #
-                            'type': 'invoice',
-                            'parent_id': brw_partner.id
-                        }
-                        # Create partner billing address
-                        _logger.info("BILL ADDRESS VALS IS ---> {}".format(address_vals))
-                        bill_addr = self.create(address_vals)
-
-                    if 'ShipAddr' in partner and partner.get('ShipAddr'):
-                        address_vals = {
-                            'street': partner.get('ShipAddr').get('Line1') or '',
-                            'street2': partner.get('ShipAddr').get('Line2') or '',
-                            'city': partner.get('ShipAddr').get('City') or '',
-                            'zip': partner.get('ShipAddr').get('PostalCode') or '',
-                            'state_id': self.env['res.country.state'].get_state_ref(
-                                partner.get('ShipAddr').get('CountrySubDivisionCode'),
-                                partner.get('ShipAddr').get('Country')) if partner.get('ShipAddr').get(
-                                'CountrySubDivisionCode') else False,  #  and partner.get('ShipAddr').get('Country')
-                            'country_id': self.env['res.country'].get_country_ref(
-                                partner.get('ShipAddr').get('Country')) if partner.get('ShipAddr').get('Country') else False,
-                            'type': 'delivery',
-                            'parent_id': brw_partner.id
-                        }
-                        # Create partner shipping address
-                        ship_addr = self.create(address_vals)
-                        _logger.info("Address Vals is ---> {}".format(address_vals))
-                    _logger.info(_("Partner created sucessfully! Partner Id: %s" % (brw_partner.id)))
-                else:
-                    brw_partner.write(vals)
-                    if 'BillAddr' in partner and partner.get('BillAddr'):
-                        address_vals = {
-                            'street': partner.get('BillAddr').get('Line1') or '',
-                            'street2': partner.get('BillAddr').get('Line2') or '',
-                            'city': partner.get('BillAddr').get('City') or '',
-                            'zip': partner.get('BillAddr').get('PostalCode') or '',
-                            'state_id': self.env['res.country.state'].get_state_ref(
-                                partner.get('BillAddr').get('CountrySubDivisionCode'),
-                                partner.get('BillAddr').get('Country')) if partner.get('BillAddr').get(
-                                'CountrySubDivisionCode') else False,  # and partner.get('BillAddr').get('Country')
-                            'country_id': self.env['res.country'].get_country_ref(
-                                partner.get('BillAddr').get('Country')) if partner.get('BillAddr').get(
-                                'Country') else False,  #
-                            'type': 'invoice',
-                            'parent_id': brw_partner.id
-                        }
-                        # Create partner billing address
-                        _logger.info("BILL ADDRESS VALS TO UPDATE ---> {}".format(address_vals))
-                        bill_addr = self.write(address_vals)
-
-                    if 'ShipAddr' in partner and partner.get('ShipAddr'):
-                        address_vals = {
-                            'street': partner.get('ShipAddr').get('Line1') or '',
-                            'street2': partner.get('ShipAddr').get('Line2') or '',
-                            'city': partner.get('ShipAddr').get('City') or '',
-                            'zip': partner.get('ShipAddr').get('PostalCode') or '',
-                            'state_id': self.env['res.country.state'].get_state_ref(
-                                partner.get('ShipAddr').get('CountrySubDivisionCode'),
-                                partner.get('ShipAddr').get('Country')) if partner.get('ShipAddr').get(
-                                'CountrySubDivisionCode') else False,  # and partner.get('ShipAddr').get('Country')
-                            'country_id': self.env['res.country'].get_country_ref(
-                                partner.get('ShipAddr').get('Country')) if partner.get('ShipAddr').get(
-                                'Country') else False,
-                            'type': 'delivery',
-                            'parent_id': brw_partner.id
-                        }
-                        # Create partner shipping address
-                        ship_addr = self.write(address_vals)
-                    _logger.info(_("Partner Updated sucessfully! Partner Id: %s" % (brw_partner.id)))
-            else:
-                _logger.info("Customer needs to be updated")
-                update_customer = self.env['ir.config_parameter'].sudo().get_param(
-                    'pragmatic_quickbooks_connector.update_customer_import')
-                if update_customer:
-                    brw_partner.write(vals)
-                    if 'BillAddr' in partner and partner.get('BillAddr'):
-                        address_vals = {
-                            'street': partner.get('BillAddr').get('Line1') or '',
-                            'street2': partner.get('BillAddr').get('Line2') or '',
-                            'city': partner.get('BillAddr').get('City') or '',
-                            'zip': partner.get('BillAddr').get('PostalCode') or '',
-                            'state_id': self.env['res.country.state'].get_state_ref(
-                                partner.get('BillAddr').get('CountrySubDivisionCode'),
-                                partner.get('BillAddr').get('Country')) if partner.get('BillAddr').get(
-                                'CountrySubDivisionCode') else False,  # and partner.get('BillAddr').get('Country')
-                            'country_id': self.env['res.country'].get_country_ref(
-                                partner.get('BillAddr').get('Country')) if partner.get('BillAddr').get('Country') else False,
-                            'type': 'invoice',
-                            'parent_id': brw_partner.id
-                        }
-                        # Create partner billing address
-                        bill_addr = self.write(address_vals)
-
-                    if 'ShipAddr' in partner and partner.get('ShipAddr'):
-                        # Create partner billing address
-                        address_vals = {
-                            'street': partner.get('ShipAddr').get('Line1') or '',
-                            'street2': partner.get('ShipAddr').get('Line2') or '',
-                            'city': partner.get('ShipAddr').get('City') or '',
-                            'zip': partner.get('ShipAddr').get('PostalCode') or '',
-                            'state_id': self.env['res.country.state'].get_state_ref(
-                                partner.get('ShipAddr').get('CountrySubDivisionCode'),
-                                partner.get('ShipAddr').get('Country')) if partner.get('ShipAddr').get(
-                                'CountrySubDivisionCode') else False,   #  and partner.get('ShipAddr').get('Country')
-                            'country_id': self.env['res.country'].get_country_ref(
-                                partner.get('ShipAddr').get('Country')) if partner.get('ShipAddr').get('Country') else False,
-                            'type': 'delivery',
-                            'parent_id': brw_partner.id
-                        }
-                        ship_addr = self.write(address_vals)
-                    _logger.info(_("Partner updated sucessfully! Partner Id: %s" % (brw_partner.id)))
-        return brw_partner
-
-    ''' Uncategorized '''
-
-    @api.model
-    def get_qbo_partner_ref(self, partner):
-        if partner.customer_rank:
-            if partner.qbo_customer_id or (partner.parent_id and partner.parent_id.qbo_customer_id):
-                return partner.qbo_customer_id or partner.parent_id.qbo_customer_id
-            else:
-                self.export_single_Partner(partner)
-                if partner.qbo_customer_id or (partner.parent_id and partner.parent_id.qbo_customer_id):
-                    return partner.qbo_customer_id or partner.parent_id.qbo_customer_id
-                # raise ValidationError(_("Partner is not exported to QBO"))
-        else:
-            if partner.qbo_vendor_id or (partner.parent_id and partner.parent_id.qbo_vendor_id):
-                return partner.qbo_vendor_id or partner.parent_id.qbo_vendor_id
-            else:
-                self.export_single_Partner(partner)
-                if partner.qbo_vendor_id or (partner.parent_id and partner.parent_id.qbo_vendor_id):
-                    return partner.qbo_vendor_id or partner.parent_id.qbo_vendor_id
-                # raise ValidationError(_("Partner is not exported to QBO"))
-
-    ''' For Export Partner'''
-
-    def sendDataToQuickbooksForUpdate(self, dict):
-
-        company = self.env['res.users'].search([('id', '=', 2)]).company_id
-
-        ''' GET ACCESS TOKEN '''
-
-        access_token = None
-        realmId = None
-        parsed_dict = json.dumps(dict)
-        if company.access_token:
-            access_token = company.access_token
-        if company.realm_id:
-            realmId = company.realm_id
-
-        if access_token:
-            headers = {}
-            headers['Authorization'] = 'Bearer ' + str(access_token)
-            headers['Content-Type'] = 'application/json'
-            headers['Accept'] = 'application/json'
-
-            result = requests.request('POST', company.url + str(realmId) + "/customer?operation=update", headers=headers, data=parsed_dict)
-            if result.status_code == 200:
-                parsed_result = result.json()
-                if parsed_result.get('Customer').get('Id'):
-                    self.x_quickbooks_updated = True
-                    return parsed_result.get('Customer').get('Id')
-                else:
-                    return False
-            else:
-                self.env['qbo.logger'].create({
-                    'odoo_name':dict.get('DisplayName'),
-                    'odoo_object':'Customer',
-                    'message': result.text,
-                    'created_date': datetime.now(),
-                })
-                return False
-
-    def sendDataToQuickbook(self, dict):
-
-        company = self.env['res.users'].search([('id', '=', 2)]).company_id
-
-        ''' GET ACCESS TOKEN '''
-
-        access_token = None
-        realmId = None
-        parsed_dict = json.dumps(dict)
-        if company.access_token:
-            access_token = company.access_token
-        if company.realm_id:
-            realmId = company.realm_id
-
-        if access_token:
-            headers = {}
-            headers['Authorization'] = 'Bearer ' + str(access_token)
-            headers['Content-Type'] = 'application/json'
-            headers['Accept'] = 'application/json'
-
-            result = requests.request('POST', company.url + str(realmId) + "/customer", headers=headers, data=parsed_dict)
-            if result.status_code == 200:
-                parsed_result = result.json()
-                if parsed_result.get('Customer').get('Id'):
-                    if self.parent_id:
-                        self.parent_id.x_quickbooks_exported = True
-                    if not self.parent_id:
-                        self.x_quickbooks_exported = True
-                    return parsed_result.get('Customer').get('Id')
-                else:
-                    return False
-            else:
-                self.env['qbo.logger'].create({
-                    'odoo_name':dict.get('DisplayName'),
-                    'odoo_object':'Customer',
-                    'message': result.text,
-                    'created_date': datetime.now(),
-                })
-                return False
-
-    def sendVendorDataToQuickbooksForUpdate(self, dict):
-
-        company = self.env['res.users'].search([('id', '=', 2)]).company_id
-
-        ''' GET ACCESS TOKEN '''
-
-        access_token = None
-        realmId = None
-        parsed_dict = json.dumps(dict)
-        if company.access_token:
-            access_token = company.access_token
-        if company.realm_id:
-            realmId = company.realm_id
-
-        if access_token:
-            headers = {}
-            headers['Authorization'] = 'Bearer ' + str(access_token)
-            headers['Content-Type'] = 'application/json'
-            headers['Accept'] = 'application/json'
-
-            result = requests.request('POST', company.url + str(realmId) + "/vendor?operation=update", headers=headers, data=parsed_dict)
-            if result.status_code == 200:
-                parsed_result = result.json()
-                if parsed_result.get('Vendor').get('Id'):
-                    self.x_quickbooks_updated = True
-                    return parsed_result.get('Vendor').get('Id')
-                else:
-                    return False
-            else:
-                self.env['qbo.logger'].create({
-                    'odoo_name':dict.get('DisplayName'),
-                    'odoo_object':'Vendor',
-                    'message': result.text,
-                    'created_date': datetime.now(),
-                })
-                return False
-
-    def sendVendorDataToQuickbook(self, dict):
-
-        company = self.env['res.users'].search([('id', '=', 2)]).company_id
-
-        ''' GET ACCESS TOKEN '''
-
-        access_token = None
-        realmId = None
-        parsed_dict = json.dumps(dict)
-        if company.access_token:
-            access_token = company.access_token
-        if company.realm_id:
-            realmId = company.realm_id
-
-        if access_token:
-            headers = {}
-            headers['Authorization'] = 'Bearer ' + str(access_token)
-            headers['Content-Type'] = 'application/json'
-            headers['Accept'] = 'application/json'
-
-            result = requests.request('POST', company.url + str(realmId) + "/vendor", headers=headers, data=parsed_dict)
-            if result.status_code == 200:
-                parsed_result = result.json()
-                if parsed_result.get('Vendor').get('Id'):
-                    if self.parent_id:
-                        self.parent_id.x_quickbooks_exported = True
-                    if not self.parent_id:
-                        self.x_quickbooks_exported = True
-                    return parsed_result.get('Vendor').get('Id')
-                else:
-                    return False
-            else:
-                self.env['qbo.logger'].create({
-                    'odoo_name':dict.get('DisplayName'),
-                    'odoo_object':'Vendor',
-                    'message': result.text,
-                    'created_date': datetime.now(),
-                })
-                return False
-
-    def prepareDictStructure(self, obj=False, record_type=False, customer_id_retrieved=False, is_update=False,
-                             sync_token=False):
-        data_object = None
-
-        if obj:
-            data_object = obj
-        else:
-            data_object = self
-
-        ''' This Function Exports Record to Quickbooks '''
-        dict = {}
-        dict_phone = {}
-        dict_email = {}
-        dict_mobile = {}
-        dict_billAddr = {}
-        dict_shipAddr = {}
-        dict_parent_ref = {}
-        dict_job = {}
-
-        if data_object.mobile:
-            dict['Mobile'] = {'FreeFormNumber': str(data_object.mobile)}
-
-        if data_object.website:
-            dict['WebAddr'] = {'URI': str(data_object.website)}
-
-        if data_object.comment:
-            dict["Notes"] = data_object.comment
-        #
-        # if data_object.name:
-        #     dict["GivenName"] = str(data_object.name)
-        #     dict['DisplayName'] = str(data_object.display_name)
-
-        if data_object.name:
-            full_name = str(data_object.name)
-            if len(full_name.split()) == 1:
-                dict["GivenName"] = full_name.split()[0]
-                dict["MiddleName"] = " "
-                dict["FamilyName"] = " "
-            if len(full_name.split()) == 2:
-                dict["GivenName"] = full_name.split()[0]
-                dict["MiddleName"] = " "
-                dict["FamilyName"] = full_name.split()[1]
-
-            if len(full_name.split()) == 3:
-                dict["GivenName"] = full_name.split()[0]
-                dict["MiddleName"] = full_name.split()[1]
-                dict["FamilyName"] = full_name.split()[2]
-
-            dict['DisplayName'] = str(data_object.name)
-            dict['PrintOnCheckName'] = str(data_object.name)
-
-        if data_object.title:
-            dict["Title"] = data_object.title.name
-
-        if data_object.email:
-            dict_email["PrimaryEmailAddr"] = {'Address': str(data_object.email)}
-
-        if data_object.phone:
-            dict_phone["PrimaryPhone"] = {'FreeFormNumber': str(data_object.phone)}
-
-        if data_object.type == 'invoice' or data_object.type == 'contact':
-
-            bill_addr = {}
-            if data_object.street:
-                bill_addr.update({'Line1': data_object.street, })
-            if data_object.street2:
-                bill_addr.update({'Line2': data_object.street2, })
-            if data_object.city:
-                bill_addr.update({'City': data_object.city, })
-            if data_object.country_id:
-                if data_object.country_id.name:
-                    bill_addr.update({'Country': data_object.country_id.name, })
-            if data_object.state_id:
-                if data_object.state_id.name:
-                    bill_addr.update({'CountrySubDivisionCode': data_object.state_id.name, })
-            if data_object.zip:
-                bill_addr.update({'PostalCode': data_object.zip, })
-
-            dict_billAddr['BillAddr'] = bill_addr
-            # dict_billAddr['BillAddr'] = {'Line1': data_object.street,
-            #                              'Line2': (data_object.street2 or ""),
-            #                              'City': (data_object.city or ""),
-            #                              'Country': data_object.country_id.name,                                                         'CountrySubDivisionCode': data_object.state_id.name,
-            #                              'PostalCode': data_object.zip}
-
-        if self.type == 'delivery':
-
-            ship_addr = {}
-            if data_object.street:
-                ship_addr.update({'Line1': data_object.street, })
-            if data_object.street2:
-                ship_addr.update({'Line2': data_object.street2, })
-            if data_object.city:
-                ship_addr.update({'City': data_object.city, })
-            if data_object.country_id:
-                if data_object.country_id.name:
-                    ship_addr.update({'Country': data_object.country_id.name, })
-            if data_object.state_id:
-                if data_object.state_id.name:
-                    ship_addr.update({'CountrySubDivisionCode': data_object.state_id.name, })
-            if data_object.zip:
-                ship_addr.update({'PostalCode': data_object.zip, })
-
-            dict_shipAddr['ShipAddr'] = ship_addr
-            # dict_shipAddr['ShipAddr'] = {'Line1': data_object.street, 'Line2': data_object.street2, 'City': data_object.city,
-            #                              'Country': data_object.country_id.name, 'CountrySubDivisionCode': data_object.state_id.name,
-            #                              'PostalCode': data_object.zip}
-
-        dict.update(dict_email)
-        dict.update(dict_phone)
-        dict.update(dict_billAddr)
-        dict.update(dict_shipAddr)
-
-        if customer_id_retrieved and record_type and record_type == "indv_company":
-            dict_parent_ref['ParentRef'] = {'value': str(customer_id_retrieved)}
-            dict.update(dict_parent_ref)
-
-            dict['Job'] = 'true'
-
-        if is_update and customer_id_retrieved:
-            dict['Id'] = str(customer_id_retrieved)
-            dict['sparse'] = "true"
-
-            ''' Check SyncToken '''
-            if sync_token:
-                dict['SyncToken'] = str(sync_token)
-            result = self.sendDataToQuickbooksForUpdate(dict)
-        else:
-            if self.customer_rank:
-                result = self.sendDataToQuickbook(dict)
-            if self.supplier_rank:
-                result = self.sendVendorDataToQuickbook(dict)
-
-        if result:
-            if is_update:
-                _logger.info("UPDATED !!!!!!!!!!!!!!")
-            else:
-                _logger.info("EXPORTED !!!!!!!!!")
-            return result
-        else:
-            _logger.info("ERROR WHILE UPLOADING !!!!!!!!!")
-
-            return False
-
-    def prepareVendorDictStructure(self, obj=False, record_type=False, vendor_id_retrieved=False, is_update=False,
-                             sync_token=False):
-        data_object = None
-
-        if obj:
-            data_object = obj
-        else:
-            data_object = self
-
-        ''' This Function Exports Record to Quickbooks '''
-        dict = {}
-        dict_phone = {}
-        dict_email = {}
-        dict_mobile = {}
-        dict_billAddr = {}
-        dict_shipAddr = {}
-        dict_parent_ref = {}
-        dict_job = {}
-
-        if data_object.mobile:
-            dict['Mobile'] = {'FreeFormNumber': str(data_object.mobile)}
-
-        if data_object.website:
-            dict['WebAddr'] = {'URI': str(data_object.website)}
-
-        if data_object.comment:
-            dict["Notes"] = data_object.comment
-        #
-        # if data_object.name:
-        #     dict["GivenName"] = str(data_object.name)
-        #     dict['DisplayName'] = str(data_object.display_name)
-
-        if data_object.name:
-            full_name = str(data_object.name)
-            if len(full_name.split()) == 1:
-                dict["GivenName"] = full_name.split()[0]
-                dict["MiddleName"] = " "
-                dict["FamilyName"] = " "
-            if len(full_name.split()) == 2:
-                dict["GivenName"] = full_name.split()[0]
-                dict["MiddleName"] = " "
-                dict["FamilyName"] = full_name.split()[1]
-
-            if len(full_name.split()) == 3:
-                dict["GivenName"] = full_name.split()[0]
-                dict["MiddleName"] = full_name.split()[1]
-                dict["FamilyName"] = full_name.split()[2]
-
-            dict['DisplayName'] = str(data_object.name)
-            dict['PrintOnCheckName'] = str(data_object.name)
-
-        if data_object.title:
-            dict["Title"] = data_object.title.name
-
-        if data_object.email:
-            dict_email["PrimaryEmailAddr"] = {'Address': str(data_object.email)}
-
-        if data_object.phone:
-            dict_phone["PrimaryPhone"] = {'FreeFormNumber': str(data_object.phone)}
-
-        if data_object.type == 'invoice' or data_object.type == 'contact':
-            bill_addr = {}
-            if data_object.street:
-                bill_addr.update({'Line1': data_object.street,})
-            if data_object.street2:
-                bill_addr.update({'Line2': data_object.street2,})
-            if data_object.city:
-                bill_addr.update({'City': data_object.city,})
-            if data_object.country_id:
-               if data_object.country_id.name:
-                   bill_addr.update({'Country': data_object.country_id.name,})
-            if data_object.state_id:
-                if data_object.state_id.name:
-                    bill_addr.update({'CountrySubDivisionCode': data_object.state_id.name, })
-            if data_object.zip:
-                bill_addr.update({'PostalCode': data_object.zip, })
-            dict_billAddr['BillAddr'] = bill_addr
-            # dict_billAddr['BillAddr'] = {'Line1': data_object.street, 'Line2': (data_object.street2 or ""),
-            #                              'City': (data_object.city or ""),
-            #                              'Country': data_object.country_id.name,
-            #                              'CountrySubDivisionCode': data_object.state_id.name,
-            #                              'PostalCode': data_object.zip}
-
-        if self.type == 'delivery':
-
-            ship_addr = {}
-            if data_object.street:
-                ship_addr.update({'Line1': data_object.street, })
-            if data_object.street2:
-                ship_addr.update({'Line2': data_object.street2, })
-            if data_object.city:
-                ship_addr.update({'City': data_object.city, })
-            if data_object.country_id:
-                if data_object.country_id.name:
-                    ship_addr.update({'Country': data_object.country_id.name, })
-            if data_object.state_id:
-                if data_object.state_id.name:
-                    ship_addr.update({'CountrySubDivisionCode': data_object.state_id.name, })
-            if data_object.zip:
-                ship_addr.update({'PostalCode': data_object.zip, })
-            dict_shipAddr['ShipAddr'] = ship_addr
-            # dict_shipAddr['ShipAddr'] = {'Line1': data_object.street, 'Line2': data_object.street2,
-            #                              'City': data_object.city,
-            #                              'Country': data_object.country_id.name,
-            #                              'CountrySubDivisionCode': data_object.state_id.name,
-            #                              'PostalCode': data_object.zip}
-
-        dict.update(dict_email)
-        dict.update(dict_phone)
-        dict.update(dict_billAddr)
-        dict.update(dict_shipAddr)
-
-        # if vendor_id_retrieved and record_type and record_type == "indv_company":
-        #     dict_parent_ref['ParentRef'] = {'value': str(vendor_id_retrieved)}
-        #     dict.update(dict_parent_ref)
-        #
-        #     dict['Job'] = 'true'
-
-        if is_update and vendor_id_retrieved:
-
-            dict['Id'] = str(vendor_id_retrieved)
-            dict['sparse'] = "true"
-
-            ''' Check SyncToken '''
-            if sync_token:
-                dict['SyncToken'] = str(sync_token)
-            result = self.sendVendorDataToQuickbooksForUpdate(dict)
-        else:
-            result = self.sendVendorDataToQuickbook(dict)
-
-        if result:
-            if is_update:
-                _logger.info("UPDATED !!!!!!!!!!!!!!")
-            else:
-                _logger.info("EXPORTED !!!!!!!!!!!!!!")
-            return result
-        else:
-            _logger.info("ERROR WHILE UPLOADING !!!!!!!!!!!!!!")
-
-            return False
-
     def updateExistingCustomer(self):
-        ''' Check first if qbo_customer_id exists in quickbooks or not'''
-        if self.x_quickbooks_exported or self.qbo_customer_id:
-            ''' Hit request ot quickbooks and check response '''
-            company = self.env['res.users'].search([('id', '=', 2)]).company_id
+        endpoint = None
+        ''' Check first if x_quickbooks_id exists in quickbooks or not'''
+        if self.x_salesforce_exported or self.x_salesforce_id:
+            ''' Hit request ot salesforce and check response '''
+            # sf_config = self.env['res.users'].search([('id','=',self._uid)],limit=1).company_id
+            sf_config = self.env.user.company_id
 
             ''' GET ACCESS TOKEN '''
 
-            access_token = None
+            sf_access_token = None
             realmId = None
-            if company.access_token:
-                access_token = company.access_token
-            if company.id:
-                realmId = company.realm_id
+            if sf_config.sf_access_token:
+                sf_access_token = sf_config.sf_access_token
 
-            if access_token:
+            if sf_access_token:
                 headers = {}
-                headers['Authorization'] = 'Bearer ' + str(access_token)
+                headers['Authorization'] = 'Bearer ' + str(sf_access_token)
                 headers['Content-Type'] = 'application/json'
                 headers['Accept'] = 'application/json'
 
-                sql_query = "select Id,SyncToken from customer Where Id = '{}'".format(str(self.qbo_customer_id))
-
-                result = requests.request('GET', company.url + str(realmId) + "/query?query=" + sql_query, headers=headers)
-                if result.status_code == 200:
+                if self.is_company:
+                    endpoint = '/services/data/v40.0/sobjects/Account/'
+                else:
+                    endpoint = '/services/data/v40.0/sobjects/Contact/'
+                result = requests.request('GET', sf_config.sf_url + endpoint + self.x_salesforce_id, headers=headers)
+                if result.status_code in [200, 201]:
                     parsed_result = result.json()
-
-                    if parsed_result.get('QueryResponse') and parsed_result.get('QueryResponse').get('Customer'):
-                        customer_id_retrieved = parsed_result.get('QueryResponse').get('Customer')[0].get('Id')
+                    if parsed_result.get('Id'):
+                        customer_id_retrieved = parsed_result.get('Id')
                         if customer_id_retrieved:
                             ''' HIT UPDATE REQUEST '''
-                            syncToken = parsed_result.get('QueryResponse').get('Customer')[0].get('SyncToken')
-                            result = self.prepareDictStructure(is_update=True, customer_id_retrieved=customer_id_retrieved, sync_token=syncToken)
+                            result = self.prepareSFDictStructure(is_update=True, customer_id_retrieved=customer_id_retrieved)
                             if result:
                                 return result
                             else:
@@ -874,248 +72,423 @@ class ResPartner(models.Model):
                 else:
                     return False
 
-    def updateExistingVendor(self):
-        ''' Check first if qbo_customer_id exists in quickbooks or not'''
-        if self.x_quickbooks_exported or self.qbo_vendor_id:
-            ''' Hit request ot quickbooks and check response '''
-            company = self.env['res.users'].search([('id', '=', 2)]).company_id
+    def sendDataToSalesforceForUpdate(self, dict):
+        # sf_config = self.env['res.users'].search([('id','=',self._uid)],limit=1).company_id
+        sf_config = self.env.user.company_id
+        ''' GET ACCESS TOKEN '''
 
-            ''' GET ACCESS TOKEN '''
+        sf_access_token = None
+        parsed_dict = json.dumps(dict)
+        if sf_config.sf_access_token:
+            sf_access_token = sf_config.sf_access_token
 
-            access_token = None
-            realmId = None
-            if company.access_token:
-                access_token = company.access_token
-            if company.id:
-                realmId = company.realm_id
+        if sf_access_token:
+            headers = {}
+            headers['Authorization'] = 'Bearer ' + str(sf_access_token)
+            headers['Content-Type'] = 'application/json'
+            headers['Accept'] = 'application/json'
 
-            if access_token:
-                headers = {}
-                headers['Authorization'] = 'Bearer ' + str(access_token)
-                headers['Content-Type'] = 'application/json'
-                headers['Accept'] = 'application/json'
+            if self.is_company:
+                endpoint = '/services/data/v39.0/sobjects/Account/'
+            else:
+                endpoint = '/services/data/v39.0/sobjects/Contact/'
 
-                sql_query = "select Id,SyncToken from vendor Where Id = '{}'".format(str(self.qbo_vendor_id))
+            result = requests.request('PATCH', sf_config.sf_url + endpoint + self.x_salesforce_id, headers=headers, data=parsed_dict)
+            if result.status_code in [204]:
+                self.x_is_updated = True
+                return True
+            else:
+                raise UserError("Error Occured While Updating" + result.text)
+                return False
 
-                result = requests.request('GET', company.url + str(realmId) + "/query?query=" + sql_query, headers=headers)
-                if result.status_code == 200:
-                    parsed_result = result.json()
+    def prepareSFDictStructure(self, obj=False, record_type=False, customer_id_retrieved=False, is_update=False, sync_token=False):
+        data_object = None
+        if obj:
+            data_object = obj
+        else:
+            data_object = self
 
-                    if parsed_result.get('QueryResponse') and parsed_result.get('QueryResponse').get('Vendor'):
-                        vendor_id_retrieved = parsed_result.get('QueryResponse').get('Vendor')[0].get('Id')
-                        if vendor_id_retrieved:
-                            ''' HIT UPDATE REQUEST '''
-                            syncToken = parsed_result.get('QueryResponse').get('Vendor')[0].get('SyncToken')
-                            result = self.prepareVendorDictStructure(is_update=True, vendor_id_retrieved=vendor_id_retrieved, sync_token=syncToken)
-                            if result:
-                                return result
-                            else:
-                                return False
+        if data_object.is_company:
+            record_type = 'company'
+
+        ''' This Function Exports Record to Quickbooks '''
+        dict = {}
+        dict_phone = {}
+        dict_email = {}
+        dict_mobile = {}
+        dict_billAddr = {}
+        dict_shipAddr = {}
+        # dict_fax = {}
+        dict_parent_ref = {}
+        dict_job = {}
+
+        if record_type != 'company':
+            if data_object.mobile:
+                dict['MobilePhone'] = str(data_object.mobile)
+
+        if record_type == 'company':
+            if data_object.website:
+                dict['Website'] = str(data_object.website)
+
+        if data_object.comment:
+            dict["Description"] = data_object.comment
+        #
+        if record_type != 'company':
+            if data_object.name:
+                name_split = data_object.name.split()
+                dict["FirstName"] = name_split[0]
+                if len(name_split) > 1:
+                    lastname = name_split[1::]
+
+                    dict["LastName"] = ' '.join(lastname)
                 else:
-                    return False
+                    dict["LastName"] = "."
+        else:
+            if data_object.name:
+                dict["Name"] = str(data_object.name)
 
-    def createParentInQuickbooks(self, odoo_partner_object, company):
-        ''' This Function Creates a new record in quicbooks and returns its Id
+        if record_type != 'company':
+            if data_object.title:
+                dict["Salutation"] = data_object.title.name
+
+            if data_object.function:
+                dict['Title'] = data_object.function
+
+        if record_type != 'company':
+            if data_object.email:
+                dict_email["Email"] = str(data_object.email)
+
+        if data_object.phone:
+            dict_phone["Phone"] = str(data_object.phone)
+
+        if data_object.type == 'invoice' or data_object.type == 'contact' and record_type == 'company':
+            if data_object.street and data_object.street2:
+                dict['BillingStreet'] = data_object.street + data_object.street2
+            elif data_object.street and not data_object.street2:
+                dict['BillingStreet'] = data_object.street
+            elif data_object.street2 and not data_object.street:
+                dict['BillingStreet'] = data_object.street2
+            else:
+                dict['BillingStreet'] = "NA"
+            dict['BillingCity'] = data_object.city
+            dict['BillingState'] = data_object.state_id.name
+            dict['BillingPostalCode'] = data_object.zip
+            dict['BillingCountry'] = data_object.country_id.name
+
+
+        elif data_object.type == 'invoice' or data_object.type == 'contact' and record_type != 'company':
+            if data_object.street and data_object.street2:
+                dict['MailingStreet'] = data_object.street + data_object.street2
+            elif data_object.street and not data_object.street2:
+                dict['MailingStreet'] = data_object.street
+            elif data_object.street2 and not data_object.street:
+                dict['MailingStreet'] = data_object.street2
+            else:
+                dict['MailingStreet'] = "NA"
+            dict['MailingCity'] = data_object.city
+            dict['MailingState'] = data_object.state_id.name
+            dict['MailingPostalCode'] = data_object.zip
+            dict['MailingCountry'] = data_object.country_id.name
+
+        if self.type == 'delivery' and record_type == 'company':
+            dict['ShippingStreet'] = data_object.street + data_object.street2
+            dict['ShippingCity'] = data_object.city
+            dict['ShippingState'] = data_object.state_id.name
+            dict['ShippingPostalCode'] = data_object.zip
+            dict['ShippingCountry'] = data_object.country_id.name
+
+        # if data_object.fax:
+        #     dict_fax['Fax'] = str(data_object.fax)
+
+        dict.update(dict_email)
+        dict.update(dict_phone)
+        dict.update(dict_billAddr)
+        dict.update(dict_shipAddr)
+        # dict.update(dict_fax)
+
+        if customer_id_retrieved and record_type and record_type == "indv_company":
+            dict_parent_ref['AccountId'] = str(customer_id_retrieved)
+            dict.update(dict_parent_ref)
+
+        if is_update and customer_id_retrieved:
+            result = self.sendDataToSalesforceForUpdate(dict)
+        else:
+            result = self.sendDataToSalesforce(dict, record_type=record_type)
+
+        if result:
+            return result
+        else:
+            return False
+
+    def createParentInSalesforce(self, odoo_partner_object, sf_config):
+        ''' This Function Creates a new record in salesforce and returns its Id
         For attaching with the record of customer which will be created in exportPartner Function'''
 
-        if odoo_partner_object and company:
+        if odoo_partner_object and sf_config:
 
-            result = self.prepareDictStructure(odoo_partner_object, record_type="company")
+            result = self.prepareSFDictStructure(odoo_partner_object, record_type="company")
             if result:
                 return result
         else:
             return False
 
-    '''STEP 1 : Retrieve All Data from odoo_partner_object to form a dictionary which will be passed
-            to Quickbooks'''
-    def checkPartnerInQuickbooks(self, odoo_partner_object):
+        '''STEP 1 : Retrieve All Data from odoo_partner_object to form a dictionary which will be passed
+        to Quickbooks'''
+
+    def checkPartnerInSalesforce(self, odoo_partner_object):
         ''' Check This Name in Quickbooks '''
         customer_id_retrieved = None
-        company = self.env['res.users'].search([('id', '=', 2)]).company_id
+        #         sf_config = self.env['res.users'].search([('id','=',self._uid)],limit=1).company_id
+        sf_config = self.env.user.company_id
+        if sf_config:
 
-        if company:
-
-            access_token = None
+            sf_access_token = None
             realmId = None
-            if company.access_token:
-                access_token = company.access_token
-            if company.realm_id:
-                realmId = company.realm_id
+            if sf_config.sf_access_token:
+                sf_access_token = sf_config.sf_access_token
 
-            if access_token and realmId:
-                ''' Hit Quickbooks and Check Availability '''
+            if sf_access_token:
+                ''' Hit SF and Check Availability '''
                 headers = {}
-                headers['Authorization'] = 'Bearer ' + str(access_token)
+                headers['Authorization'] = 'Bearer ' + str(sf_access_token)
                 headers['Content-Type'] = 'application/json'
                 headers['Accept'] = 'application/json'
 
-                if odoo_partner_object.supplier_rank:
-                    sql_vendor_query = "select Id from vendor Where DisplayName = '{}'".format(
-                        str(odoo_partner_object.name))
-                    vendor_result = requests.request('GET',
-                                                     company.url + str(realmId) + "/query?query=" + sql_vendor_query,
-                                                     headers=headers)
-                    if vendor_result.status_code == 200:
-                        parsed_result = vendor_result.json()
-                        if parsed_result.get('QueryResponse') and parsed_result.get('QueryResponse').get('Vendor'):
-                            vendor_id_retrieved = parsed_result.get('QueryResponse').get('Vendor')[0].get('Id')
-                            if vendor_id_retrieved:
-                                return vendor_id_retrieved
+                q_para = str(odoo_partner_object.name)
+                query = "select Id from account where Name = '{}'".format(q_para)
 
-                sql_query = "select Id from customer Where DisplayName = '{}'".format(str(odoo_partner_object.name))
-
-                result = requests.request('GET', company.url + str(realmId) + "/query?query=" + sql_query,
+                result = requests.request('GET',
+                                          sf_config.sf_url + "/services/data/v40.0/query/?q=select Id from account where Name = '{}'".format(q_para),
                                           headers=headers)
-
                 if result.status_code == 200:
+
                     parsed_result = result.json()
 
-                    if parsed_result.get('QueryResponse') and parsed_result.get('QueryResponse').get('Customer'):
-                        customer_id_retrieved = parsed_result.get('QueryResponse').get('Customer')[0].get('Id')
+                    if parsed_result.get('records') and parsed_result.get('records')[0].get('Id'):
+                        customer_id_retrieved = parsed_result.get('records')[0].get('Id')
                         if customer_id_retrieved:
                             return customer_id_retrieved
-                    if not parsed_result.get('QueryResponse').get('Customer'):
-                        new_quickbooks_parent_id = self.createParentInQuickbooks(odoo_partner_object, company)
-                        if new_quickbooks_parent_id:
-                            if odoo_partner_object.customer:
-                                odoo_partner_object.qbo_customer_id = new_quickbooks_parent_id
-                            if odoo_partner_object.supplier_rank:
-                                odoo_partner_object.qbo_vendor_id = new_quickbooks_parent_id
-                            odoo_partner_object.x_quickbooks_exported = True
-
-                            return new_quickbooks_parent_id
-                        else:
-                            _logger.info("Inside Else of new_quickbooks_parent_id !!!!!!!!!!!!!!")
-
+                    if not parsed_result.get('records'):
+                        new_sf_parent_id = self.createParentInSalesforce(odoo_partner_object, sf_config)
+                        if new_sf_parent_id:
+                            odoo_partner_object.x_salesforce_exported = True
+                            odoo_partner_object.x_salesforce_id = new_sf_parent_id
+                            return new_sf_parent_id
                         return False
+
+                    # if customer_id_retrieved:
+                    #     return customer_id_retrieved
+                    # else:
+                    #     ''' Create That Parents Record In Quickbooks and Return Its ID '''
+                    #     new_sf_parent_id = self.createParentInSalesforce(odoo_partner_object,sf_config)
+                    #     return False
                 else:
                     raise UserError("Error Occured In Partner Search Request" + result.text)
                 return False
-        else:
-            _logger.info("Didnt Got QUickbooks Config !!!!!!!!!!!!!!")
 
-    @api.model
-    def exportCustomer(self):
-        # print("CUSTOMER ---------", self)
-        if self.x_quickbooks_exported or self.qbo_customer_id:
+    def sendDataToSalesforce(self, dict, record_type=False):
+        # sf_config = self.env['res.users'].search([('id','=',self._uid)],limit=1).company_id.
+        sf_config = self.env.user.company_id
 
-            # if self.qbo_customer_id:
-            '''  If Customer Already Exported to quickbooks then hit update request '''
+        ''' GET ACCESS TOKEN '''
 
-            # STEP 1 : GET ID FROM QUICKBOOKS USING GET REQUEST QUERY TO QUICKBOOKS
-            update_customer = self.env['ir.config_parameter'].sudo().get_param('pragmatic_quickbooks_connector.update_customer_export')
-            if update_customer:
-                result = self.updateExistingCustomer()
-                if result:
-                    _logger.info("Update was successful !")
-                    # raise UserError("Update was successful !")
-                else:
-                    _logger.info("Update was not successful !")
-                    # raise UserError("Update unsuccessful :(")
+        sf_access_token = None
+        realmId = None
+        endpoint = None
+        parsed_dict = json.dumps(dict)
+        if sf_config.sf_access_token:
+            sf_access_token = sf_config.sf_access_token
+
+        if sf_access_token:
+            headers = {}
+            headers['Authorization'] = 'Bearer ' + str(sf_access_token)
+            headers['Content-Type'] = 'application/json'
+            headers['Accept'] = 'application/json'
+
+            if self.is_company or record_type == 'company':
+                endpoint = '/services/data/v40.0/sobjects/Account'
             else:
-                _logger.info("Your not allowed to update any customers while exporting. !")
-        else:
-            #             raise UserError("Customer Already Exported To Quickbooks")
-            #             return False
-            ''' Checking if parent_id is assigned or not if not then first read that parent_id and check in
-            Quickbooks if present if present then make sub customer else first create that company in Quickbooks and
-            attach its reference.
-            '''
+                endpoint = '/services/data/v40.0/sobjects/Contact'
 
-            if self.parent_id:
-                ''' Check self.parent_id.name in Quickbooks '''
-                customer_id_retrieved = self.checkPartnerInQuickbooks(self.parent_id)
-                if customer_id_retrieved:
-                    result = self.prepareDictStructure(record_type="indv_company",
-                                                       customer_id_retrieved=customer_id_retrieved)
-                    if result:
-                        self.qbo_customer_id = result
-                        self.x_quickbooks_exported = True
-                        self._cr.commit()
+            result = requests.request('POST', sf_config.sf_url + endpoint, headers=headers, data=parsed_dict)
+            if result.status_code in [200, 201]:
+                parsed_result = result.json()
+                if parsed_result.get('id'):
+                    if self.parent_id:
+                        self.parent_id.x_salesforce_exported = True
+                    if not self.parent_id:
+                        self.x_salesforce_exported = True
+                    self.x_salesforce_id = parsed_result.get('id')
+                    return parsed_result.get('id')
                 else:
-                    _logger.info("Customer ID was not retrieved")
-
-            if not self.parent_id:
-                result = self.prepareDictStructure(record_type="individual")
-                if result:
-                    self.qbo_customer_id = result
-                    self.x_quickbooks_exported = True
-                    self._cr.commit()
-
-    @api.model
-    def exportVendor(self):
-        if self.x_quickbooks_exported or self.qbo_vendor_id:
-            # if self.qbo_customer_id:
-            '''  If Customer Already Exported to quickbooks then hit update request '''
-
-            # STEP 1 : GET ID FROM QUICKBOOKS USING GET REQUEST QUERY TO QUICKBOOKS
-            update_vendor = self.env['ir.config_parameter'].sudo().get_param(
-                'pragmatic_quickbooks_connector.update_vendor_export')
-
-            if update_vendor:
-                result = self.updateExistingVendor()
-                if result:
-                    _logger.info("Update was successful !")
-                    # raise UserError("Update was successful !")
-                else:
-                    _logger.info("Update was not successful !")
-                    # raise UserError("Update unsuccessful :(")
+                    return False
             else:
-                _logger.info("Your not allowed to update any vendors while exporting.")
+                raise UserError("Error Occured While Exporting" + result.text + str(result.status_code))
+                return False
+
+    def create_partner_in_sf(self, sf_partner_dict):
+        create_in_sf = True
+        sf_config = self.env.user.company_id
+        if not sf_config.sf_access_token:
+            return False
+        headers = sf_config.get_sf_headers(True)
+        if self.is_company:
+            endpoint = '/services/data/v40.0/sobjects/Account'
         else:
+            endpoint = '/services/data/v40.0/sobjects/Contact'
+        parsed_dict = json.dumps(sf_partner_dict)
+        result = requests.request('POST', sf_config.sf_url + endpoint, headers=headers, data=parsed_dict)
+        if result.status_code in [200, 201]:
+            parsed_result = result.json()
+            if parsed_result.get('id'):
+                self.x_is_updated = True
+                self.x_salesforce_exported = True
+                self.x_last_modified_on = datetime.now()
+                self.x_salesforce_id = parsed_result.get('id')
+                # self.commit()
+                _logger.info("Updated companies in salesforce")
+                return parsed_result.get('id')
+            else:
+                return False
+        elif result.status_code == 401:
+            sf_config.refresh_salesforce_token_from_access_token()
+            _logger.info("ACCESS TOKEN EXPIRED, GETTING NEW REFRESH TOKEN...")
+            return False
+        else:
+            parsed_json = result.json()
+            _logger.error('response Of Partner creation in salesforce  (%s)', str(parsed_json[0].get('message')))
+            return False
 
-            #             raise UserError("Customer Already Exported To Quickbooks")
-            #             return False
-            ''' Checking if parent_id is assigned or not if not then first read that parent_id and check in 
-            Quickbooks if present if present then make sub customer else first create that company in Quickbooks and 
-            attach its reference.
-            '''
+    def update_partner_in_sf(self, sf_partner_dict):
+        sf_config = self.env.user.company_id
+        parsed_dict = json.dumps(sf_partner_dict)
 
-            if self.parent_id:
-                ''' Check self.parent_id.name in Quickbooks '''
-                customer_id_retrieved = self.checkPartnerInQuickbooks(self.parent_id)
-                if customer_id_retrieved:
-                    result = self.prepareVendorDictStructure(record_type="indv_company",
-                                                             vendor_id_retrieved=customer_id_retrieved)
+        if not sf_config.sf_access_token:
+            return False
+        headers = sf_config.get_sf_headers(True)
+        if self.is_company:
+            endpoint = '/services/data/v40.0/sobjects/Account/'
+        else:
+            endpoint = '/services/data/v40.0/sobjects/Contact/'
 
-                    if result:
-                        self.qbo_vendor_id = result
-                        self.x_quickbooks_exported = True
-                        self._cr.commit()
-                else:
-                    _logger.info("Customer ID was not retrieved")
+        result = requests.request('PATCH', sf_config.sf_url + endpoint + self.x_salesforce_id, headers=headers, data=parsed_dict)
+        if result.status_code in [204]:
+            self.x_is_updated = True
+            self.x_last_modified_on = datetime.now()
+            _logger.info("Exported companies in salesforce")
+            return True
+        elif result.status_code == 401:
+            sf_config.refresh_salesforce_token_from_access_token()
+            return False
+        else:
+            _logger.error('Error Occurred While Updating : %s ', result.text)
+            return False
 
+    def create_contact_sf_dict(self):
+        contact_dict = {}
+        name_split = self.name.split(' ', 1)
+        contact_dict["FirstName"] = name_split[0]
+        if len(name_split) > 1:
+            lastname = name_split[-1]
+            contact_dict["LastName"] = lastname
+        else:
+            contact_dict["LastName"] = "."
+        if self.parent_id:
+            if self.parent_id.x_salesforce_id:
+                contact_dict["AccountId"] = self.parent_id.x_salesforce_id
+        if self.mobile:
+            contact_dict['MobilePhone'] = str(self.mobile)
+        if self.title:
+            contact_dict["Salutation"] = self.title.name
+        if self.email:
+            contact_dict["Email"] = str(self.email)
+        if self.function:
+            contact_dict['Title'] = self.function
+        if self.comment:
+            contact_dict["Description"] = self.comment
+        if self.phone:
+            contact_dict["Phone"] = str(self.phone)
 
-            if not self.parent_id:
-                result = self.prepareVendorDictStructure(record_type="individual")
-                if result:
-                    self.qbo_vendor_id = result
-                    self.x_quickbooks_exported = True
-                    self._cr.commit()
+        if self.street and self.street2:
+            contact_dict['MailingStreet'] = self.street + self.street2
+        elif self.street and not self.street2:
+            contact_dict['MailingStreet'] = self.street
+        elif self.street2 and not self.street:
+            contact_dict['MailingStreet'] = self.street2
+        if self.city:
+            contact_dict['MailingCity'] = self.city
+        if self.state_id.name:
+            contact_dict['MailingState'] = self.state_id.name
+        if self.zip:
+            contact_dict['MailingPostalCode'] = self.zip
+        if self.country_id.name:
+            contact_dict['MailingCountry'] = self.country_id.name
+        return contact_dict
 
-    # @api.multi
-    def export_single_Partner(self,partner):
-        if partner.customer_rank:
-            partner.exportCustomer()
-        elif partner.supplier_rank == 1:
-            partner.exportVendor()
+    def create_company_sf_dict(self):
+        company_dict = {}
+        company_dict["Name"] = str(self.name)
+        if self.parent_id.is_company and self.parent_id.x_salesforce_id:
+            company_dict["ParentId"] = str(self.parent_id.x_salesforce_id)
+        if self.comment:
+            company_dict["Description"] = self.comment
+        if self.phone:
+            company_dict["Phone"] = str(self.phone)
+        if self.website:
+            company_dict["Website"] = str(self.website)
+        billing_addr_dict = {}
+        if self.street or self.street2:
+            billing_addr_dict['BillingStreet'] = self.street or '' + self.street2 or ''
+        billing_addr_dict['BillingCity'] = self.city if self.city else ''
+        billing_addr_dict['BillingState'] = self.state_id.name if self.state_id else ''
+        billing_addr_dict['BillingPostalCode'] = self.zip if self.zip else ''
+        billing_addr_dict['BillingCountry'] = self.country_id.name if self.country_id else ''
+        company_dict.update(billing_addr_dict)
+        return company_dict
 
     @api.model
-    def exportPartner(self):
+    def _scheduler_export_companies_to_sf(self):
+        companies = self.search([('x_is_updated', '=', False), ('id', 'not in', [1, 2, 3]), ('is_company', '=', True)])
+        for company in companies:
+            try:
+                sf_company_dict = company.create_company_sf_dict()
+                if company.x_salesforce_id:
+                    company.update_partner_in_sf(sf_company_dict)
+                else:
+                    company.create_partner_in_sf(sf_company_dict)
+            except Exception as e:
+                _logger.error('Oops Some error in  creating/updating partner in SALESFORCE %s', e)
 
-        # if len(self) > 1:
-        #     raise UserError("Select 1 record at a time.")
-        #     return
-        if len(self) > 1:
-            for customer in self:
-                if customer.type == 'contact':
-                    if customer.customer == True:
-                        customer.exportCustomer()
-                    elif customer.supplier_rank == 1:
-                        customer.exportVendor()
-        else:
-            if self.type == 'contact':
-                if self.customer_rank:
-                    self.exportCustomer()
-                elif self.supplier_rank:
-                    self.exportVendor()
+    @api.model
+    def _scheduler_export_contacts_to_sf(self):
+        contacts = self.search([('x_is_updated', '=', False), ('id', 'not in', [1, 2, 3]), ('is_company', '=', False), ('type', '=', 'contact')])
+        for contact in contacts:
+            try:
+                sf_company_dict = contact.create_contact_sf_dict()
+                if contact.x_salesforce_id:
+                    contact.update_partner_in_sf(sf_company_dict)
+                else:
+                    contact.create_partner_in_sf(sf_company_dict)
+            except Exception as e:
+                _logger.error('Oops Some error in  creating/updating partner in SALESFORCE %s', e)
+
+    @api.model
+    def exportPartner_to_sf(self):
+        active_ids = self.env.context.get('active_ids')
+        sf_config = self.env.user.company_id
+        if not active_ids:
+            raise UserError(_("No ids selected"))
+        account_id = False
+        for partner in self.browse(active_ids):
+            if partner.is_company:
+                sf_company_dict = partner.create_company_sf_dict()
+                if partner.x_salesforce_id:
+                    partner.update_partner_in_sf(sf_company_dict)
+                else:
+                    partner.create_partner_in_sf(sf_company_dict)
+            elif not partner.is_company:
+                sf_company_dict = partner.create_contact_sf_dict()
+                if partner.x_salesforce_id:
+                    partner.update_partner_in_sf(sf_company_dict)
+                else:
+                    partner.create_partner_in_sf(sf_company_dict)

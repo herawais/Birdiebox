@@ -31,7 +31,7 @@ class CalendarEvent(models.Model):
             headers['Authorization'] = 'Bearer ' + str(sf_access_token)
             headers['Content-Type'] = 'application/json'
             headers['Accept'] = 'application/json'
-            endpoint = '/services/data/v40.0/sobjects/Event__c'
+            endpoint = '/services/data/v40.0/sobjects/Event'
             payload = json.dumps(event_dict)
             if self.x_salesforce_id:
                 ''' Try Updating it if already exported '''

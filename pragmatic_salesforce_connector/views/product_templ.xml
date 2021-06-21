@@ -17,7 +17,7 @@
       <field name="state">code</field>
       <field name="code">
 		if records:
-		  records.exportProductTemplate_to_sf()
+		  records.exportProduct_Template_to_sf()
       </field>
     </record>
          
@@ -31,4 +31,15 @@
 				</field>
             </field> 
         </record>
+        <record id="product_template_form_view" model="ir.ui.view">
+            <field name="name">product.template.form.inherit</field>
+            <field name="model">product.template</field>
+            <field name="inherit_id" ref="product.product_template_only_form_view"/>
+            <field name="arch" type="xml">
+				<field name="barcode" position="before">
+					<field name="x_salesforce_id" readonly="1"/>
+				</field>
+            </field>
+        </record>
+
 </odoo>

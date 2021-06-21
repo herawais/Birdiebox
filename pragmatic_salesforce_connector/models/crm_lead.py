@@ -70,7 +70,30 @@ class CRMLead(models.Model):
         if self.partner_name:
             lead_dict['Company'] = self.partner_name
         if self.sf_status:
-            lead_dict['Status'] =  dict(self._fields['sf_status'].selection).get(self.sf_status) 
+            lead_dict['Status'] =  dict(self._fields['sf_status'].selection).get(self.sf_status)
+        if self.title:
+            lead_dict['Salutation'] = self.title.name
+        if self.name:
+            lead_dict['LastName'] = self.name
+        if self.phone:
+            lead_dict['Phone'] = self.phone
+        if self.mobile:
+            lead_dict['MobilePhone'] = self.mobile
+        if self.email_from:
+            lead_dict['Email'] = self.email_from
+        if self.website:
+            lead_dict['Website'] = self.website
+        if self.description:
+            lead_dict['Description'] = self.description
+        if self.street:
+            lead_dict['Street'] = self.street
+        if self.city:
+            lead_dict['City'] = self.city
+        if self.zip:
+            lead_dict['PostalCode'] = self.zip
+        if self.country_id:
+            lead_dict['Country'] = self.country_id.name
+
         result = self.sendDataToSf(lead_dict)
         if result:
             self.x_salesforce_exported = True

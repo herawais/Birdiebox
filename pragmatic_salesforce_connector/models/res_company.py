@@ -194,6 +194,112 @@ class ResCompany(models.Model):
             else:
                 return False
 
+    def sf_createOdooParentId_Activity(self,sf_account_id,search_for):
+        if sf_account_id:
+            ''' GET DICTIONARY FROM QUICKBOOKS FOR CREATING A DICT '''
+            if search_for == 'account':
+                data = self.fetch_sf_cust_details(sf_account_id, is_account=True)
+            else:
+                data = self.fetch_sf_cust_details(sf_account_id)
+            if data:
+                cust = data
+                if cust:
+                    # if int(cust.get('Id')) > self.x_quickbooks_last_customer_imported_id:
+                    ''' Check if the Id from Salesforce is present in odoo or not if present
+                    then dont insert, This will avoid duplications'''
+                    res_partner = self.env['res.partner'].search([('x_salesforce_id', '=', sf_account_id)], limit=1)
+                    if res_partner:
+                        return res_partner.id
+                    if not res_partner:
+                        dict = {}
+                        if cust.get('Phone'):
+                            dict['phone'] = cust.get('Phone')
+                        if cust.get('Email'):
+                            dict['email'] = cust.get('Email')
+                        if cust.get('Name'):
+                            dict['name'] = cust.get('Name')
+                        # if cust.get('Active'):
+                        #     if str(cust.get('Active')) == 'true':
+                        #         dict['active']=True
+                        #     else:
+                        #         dict['active']=False
+                        if cust.get('Id'):
+                            dict['x_salesforce_id'] = cust.get('Id')
+                        if cust.get('Description'):
+                            dict['comment'] = cust.get('Description')
+                        dict['is_company'] = True
+                        if cust.get('MobilePhone'):
+                            dict['mobile'] = cust.get('MobilePhone')
+                        # if cust.get('Fax'):
+                        #     dict['fax'] = cust.get('Fax')
+                        if cust.get('Website'):
+                            dict['website'] = cust.get('Website')
+                        dict['company_type'] = 'company'
+                        # nt "DICT TO ENTER IS : {}".format(dict)
+                        create = res_partner.sudo().create(dict)
+                        if create:
+                            if cust.get('BillingAddress'):
+                                ''' Getting BillAddr from salesforce and Checking 
+                                    in odoo to get countryId, stateId and create
+                                    state if not exists in odoo
+                                    '''
+                                dict = {}
+                                ''' 
+                                Get state id if exists else create new state and return it
+                                '''
+                                if cust.get('BillingAddress').get('state'):
+                                    state_id = self.sf_attachCustomerState(cust.get('BillingAddress').get('state'),
+                                                                        cust.get('BillingAddress').get('country',
+                                                                                                       cust.get('BillingAddress').get('state')))
+                                    if state_id:
+                                        dict['state_id'] = state_id
+                                country = cust.get('BillingAddress').get('country', False)
+                                if country:
+                                    country_id = self.env['res.country'].search([
+                                        ('name', '=', country)], limit=1)
+                                    if country_id:
+                                        dict['country_id'] = country_id.id
+                                    else:
+                                        country_id = self.env['res.country'].sudo().create({'name': country})
+                                        dict['country_id'] = country_id.id
+
+                                dict['parent_id'] = create.id
+                                dict['type'] = 'invoice'
+                                dict['zip'] = cust.get('BillingAddress').get('postalCode', ' ')
+                                dict['city'] = cust.get('BillingAddress').get('city')
+                                dict['street'] = cust.get('BillingAddress').get('street')
+                                child_create = res_partner.sudo().create(dict)
+                            if cust.get('ShippingAddress'):
+                                ''' Getting ShippingAddress from salesforce and Checking 
+                                    in odoo to get countryId, stateId and create
+                                    state if not exists in odoo
+                                    '''
+                                dict = {}
+                                if cust.get('ShippingAddress').get('state'):
+                                    state_id = self.sf_attachCustomerState(cust.get('ShippingAddress').get('state'),
+                                                                        cust.get('ShippingAddress').get('country'))
+                                    if state_id:
+                                        dict['state_id'] = state_id
+                                country = cust.get('ShippingAddress').get('country')
+                                if country:
+                                    country_id = self.env['res.country'].search([('name', '=', country)], limit=1)
+                                    if country_id:
+                                        dict['country_id'] = country_id.id
+                                    else:
+                                        country_id = self.env['res.country'].create({'name': country})
+                                        dict['country_id'] = country_id.id
+                                dict['parent_id'] = create.id
+                                dict['type'] = 'delivery'
+                                dict['zip'] = cust.get('ShippingAddress').get('postalCode', ' ')
+                                dict['city'] = cust.get('ShippingAddress').get('city')
+                                dict['street'] = cust.get('ShippingAddress').get('street')
+                                child_create = res_partner.sudo().create(dict)
+                                if child_create:
+                                    pass
+                                # self.x_quickbooks_last_customer_sync = fields.Datetime.now()
+                                # self.x_quickbooks_last_customer_imported_id = int(cust.get('Id'))
+                            return create.id
+
     def sf_createOdooParentId(self, sf_account_id):
         if sf_account_id:
             ''' GET DICTIONARY FROM QUICKBOOKS FOR CREATING A DICT '''
@@ -574,6 +680,9 @@ class ResCompany(models.Model):
             headers['accept'] = 'application/json'
             headers['Content-Type'] = 'text/plain'
             data = requests.request('GET', self.sf_url + "/services/data/v40.0/sobjects/product2/" + str(rec), headers=headers)
+            file_data = requests.request('GET', self.sf_url + "/services/data/v40.0/sobjects/ContentDocument/06904000000IMuCAAW", headers=headers)
+            if file_data.status_code:
+                file_data1 = json.loads(str(file_data.text))
             if data.status_code == 200:
                 if data.text:
                     products_data = json.loads(str(data.text))
@@ -677,6 +786,9 @@ class ResCompany(models.Model):
                 sf_modified_date = self.convert_odoodt_tosf(str(temp_odoo_date))
                 data = requests.request('GET', self.sf_url + "/services/data/v40.0/query/?q=select Id from Product2 where (LastModifiedDate > {}) ORDER BY LastModifiedDate".format(
                                                 sf_modified_date), headers=headers)
+                file_data = requests.request('GET',
+                                             self.sf_url + "/services/data/v40.0/query/?q=select Id from ContentDocument", headers=headers)
+
                 if data:
                     recs = []
                     parsed_data = json.loads(str(data.text))
@@ -1502,6 +1614,7 @@ class ResCompany(models.Model):
                 if data:
                     recs = []
                     parsed_data = json.loads(str(data.text))
+                    print("\\n=== parsed_data==", parsed_data)
                     if parsed_data:
                         for p in parsed_data.get('records'):
                             recs.append(p.get('Id'))
@@ -1509,10 +1622,22 @@ class ResCompany(models.Model):
                     for rec in recs:
                         opportunity_dict = {}
                         opportunity_read = self.fetch_sf_opportunity_details(rec)
+                        print("\\n=== opportunity_read==",opportunity_read)
                         ''' PREPARE DICT FOR INSERTING IN CRM.LEAD '''
                         if opportunity_read.get('Name'):
                             opportunity_dict['name'] = opportunity_read.get('Name')
                             opportunity_dict['type'] ='opportunity'
+                        if opportunity_read.get('Amount'):
+                            opportunity_dict['expected_revenue'] = opportunity_read.get('Amount')
+                        if opportunity_read.get('Probability'):
+                            opportunity_dict['probability'] = opportunity_read.get('Probability')
+                        if opportunity_read.get('AccountId'):
+                            result = self.sf_createOdooParentId(opportunity_read.get('AccountId'))
+                            if result:
+                                opportunity_dict['partner_id'] = result
+                        if opportunity_read.get('Probability'):
+                            opportunity_dict['probability'] = opportunity_read.get('Probability')
+
                         if opportunity_read.get('CloseDate'):
                             opportunity_dict['date_deadline'] = opportunity_read.get('CloseDate')
                         
@@ -1520,7 +1645,7 @@ class ResCompany(models.Model):
                             opportunity_dict['description'] = opportunity_read.get('Description')
 
                         if opportunity_read.get('StageName'):
-                            crm_stage = self.env['crm.stage'].search([('name','=',opportunity_read.get('StageName'))])
+                            crm_stage = self.env['crm.stage'].search([('name','=',opportunity_read.get('StageName'))],limit=1)
                             opportunity_dict['stage_id'] = crm_stage.id
                             if opportunity_read.get('StageName') == 'Closed Won':
                                 crm_stage = self.env['crm.stage'].search([('name','=','Won')])
@@ -1635,7 +1760,7 @@ class ResCompany(models.Model):
             headers['Authorization'] = 'Bearer ' + str(self.sf_access_token)
             headers['accept'] = 'application/json'
             headers['Content-Type'] = 'text/plain'
-            data = requests.request('GET', self.sf_url + "/services/data/v40.0/sobjects/Event__c/" + str(rec), headers=headers)
+            data = requests.request('GET', self.sf_url + "/services/data/v40.0/sobjects/Event/" + str(rec), headers=headers)
             if data.status_code == 200:
                 if data.text:
                     events_data = json.loads(str(data.text))
@@ -1654,6 +1779,7 @@ class ResCompany(models.Model):
 
             if event_dict:
                 res = event_obj.sudo().create(event_dict)
+                print("\n\n-- res ---",res)
                 if res:
                     ''' Write x_salesforce_id '''
                     res.sudo().write({'x_salesforce_id': sf_id})
@@ -1677,7 +1803,7 @@ class ResCompany(models.Model):
                 headers['Content-Type'] = 'text/plain'
                 temp_odoo_date = self.event_lastmodifieddate
                 sf_modified_date = self.convert_odoodt_tosf(str(temp_odoo_date))
-                data = requests.request('GET', self.sf_url + "/services/data/v40.0/query/?q=select Id from Event__c where (LastModifiedDate > {}) ORDER BY LastModifiedDate".format(
+                data = requests.request('GET', self.sf_url + "/services/data/v40.0/query/?q=select Id from Event where (LastModifiedDate > {}) ORDER BY LastModifiedDate".format(
                                                 sf_modified_date), headers=headers)
                 if data:
                     recs = []
@@ -1690,11 +1816,15 @@ class ResCompany(models.Model):
                         event_dict = {}
                         event_read = self.fetch_sf_event_details(rec)
                         ''' PREPARE DICT FOR INSERTING IN CALENDAR.EVENT '''
-                        if event_read.get('Name'):
-                            event_dict['name'] = event_read.get('Name')
+                        if event_read.get('Subject'):
+                            event_dict['name'] = event_read.get('Subject')
                                                        
-                        if event_read.get('Event_Start_Date__c'):
-                            event_dict['start'] = event_read.get('Event_Start_Date__c')
+                        if event_read.get('StartDateTime'):
+                            result1 = datetime.strptime(event_read.get('StartDateTime')[0:19], "%Y-%m-%dT%H:%M:%S")
+                            event_dict['start'] = result1
+                        if event_read.get('EndDateTime'):
+                            result2 = datetime.strptime(event_read.get('EndDateTime')[0:19], "%Y-%m-%dT%H:%M:%S")
+                            event_dict['stop'] = result2
 
                         if event_dict:
                             self.create_sf_Event(event_dict, event_read.get('Id'))
@@ -1739,7 +1869,7 @@ class ResCompany(models.Model):
                 return False
         else:
             ''' Write Event Data '''
-           
+
             activity_exists.sudo().write(activity_dict)
     
     def import_sf_activity(self):
@@ -1756,6 +1886,7 @@ class ResCompany(models.Model):
                 if data:
                     recs = []
                     parsed_data = json.loads(str(data.text))
+                    print("\n\n==== data ----",parsed_data)
                     if parsed_data:
                         for p in parsed_data.get('records'):
                             recs.append(p.get('Id'))
@@ -1766,21 +1897,60 @@ class ResCompany(models.Model):
                         ''' PREPARE DICT FOR INSERTING IN MAIL.ACTIVITY '''
                         print("\n\n---activity_read--- ",activity_read)
                         if activity_read.get('WhoId'):
-                            res_partner = self.env['res.partner'].search([('x_salesforce_id', '=', activity_read.get('WhoId'))], limit=1)
-                            activity_dict['request_partner_id'] = res_partner.id
-                            activity_dict['res_name'] = res_partner.name
-                            activity_dict['res_id'] = res_partner.id
+                            result = self.sf_createOdooParentId_Activity(activity_read.get('WhoId'),search_for='contact')
+                            if result:
+                                activity_dict['request_partner_id'] = result
+                                activity_dict['res_name'] = result
+                                activity_dict['res_id'] = result
+                            # res_partner = self.env['res.partner'].search([('x_salesforce_id', '=', activity_read.get('WhoId'))], limit=1)
+                            # activity_dict['request_partner_id'] = res_partner.id
+                            # activity_dict['res_name'] = res_partner.name
+                            # activity_dict['res_id'] = res_partner.id
+                            else:
+                                raise UserError(_(
+                                    "WhoId Not found in the record please add it first for id " + activity_read.get(
+                                        'Id')))
+                        else:
+                            raise UserError(_("WhoId Not found in the record please add it first for id " + activity_read.get('Id')))
                         if activity_read.get('WhatId'):
-                            res_partner = self.env['res.partner'].search([('x_salesforce_id', '=', activity_read.get('WhatId'))], limit=1)
-                            activity_dict['parent_id'] = res_partner.id
+                            result = self.sf_createOdooParentId_Activity(activity_read.get('WhatId'),search_for='account')
+                            if result:
+                                activity_dict['parent_id'] = result
+
+                            # res_partner = self.env['res.partner'].search([('x_salesforce_id', '=', activity_read.get('WhatId'))], limit=1)
+                            # activity_dict['parent_id'] = res_partner.id
+                            else:
+                                raise UserError(_(
+                                    "WhatId Not found in the record please add it first for id " + activity_read.get(
+                                        'Id')))
+                        else:
+                            raise UserError(_("WhatId Not found in the record please add it first for id " + activity_read.get('Id')))
                         if not activity_read.get('WhoId') and activity_read.get('WhatId'):
-                            res_partner = self.env['res.partner'].search([('x_salesforce_id', '=', activity_read.get('WhatId'))], limit=1)
-                            activity_dict['res_name'] = res_partner.name
-                            activity_dict['res_id'] = res_partner.id
+                            result = self.sf_createOdooParentId_Activity(activity_read.get('WhatId'),search_for='account')
+                            if result:
+                                res_partner = self.env['res.partner'].search([('id', '=', result)], limit=1)
+                                activity_dict['res_name'] = res_partner.name
+                                activity_dict['res_id'] = res_partner.id
+                            # res_partner = self.env['res.partner'].search(
+                            #     [('x_salesforce_id', '=', activity_read.get('WhatId'))], limit=1)
+                            # activity_dict['res_name'] = res_partner.name
+                            # activity_dict['res_id'] = res_partner.id
+                            else:
+                                raise UserError(_(
+                                    "WhatId Not found in the record please add it first for id " + activity_read.get(
+                                        'Id')))
+                        else:
+                            raise UserError(_("WhatId Not found in the record please add it first for id " + activity_read.get('Id')))
                         if not activity_read.get('WhoId') and not activity_read.get('WhatID'):
-                            res_partner = self.env['res.partner'].search([('x_salesforce_id', '=', activity_read.get('OwnerId'))], limit=1)
-                            activity_dict['res_name'] = res_partner.name
-                            activity_dict['res_id'] = res_partner.id
+                            result = self.sf_createOdooParentId_Activity(activity_read.get('OwnerId'),search_for='account')
+                            if result:
+                                res_partner = self.env['res.partner'].search([('id', '=', result)], limit=1)
+                                activity_dict['res_name'] = res_partner.name
+                                activity_dict['res_id'] = res_partner.id
+                            # res_partner = self.env['res.partner'].search(
+                            #     [('x_salesforce_id', '=', activity_read.get('OwnerId'))], limit=1)
+                            # activity_dict['res_name'] = res_partner.name
+                            # activity_dict['res_id'] = res_partner.id
                         if activity_read.get('Status'):
                             if activity_read.get('Status') == 'Not Started':
                                 activity_dict['sf_status'] = 'not_started'

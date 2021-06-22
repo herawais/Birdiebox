@@ -18,6 +18,7 @@
             <field name="inherit_id" ref="mail.mail_activity_view_form_popup"/>
             <field name="arch" type="xml">
 				<field name="activity_type_id" position="after">
+                    <field name="res_id"/>
 					<field name="x_salesforce_id" readonly="1"/>
                     <field name="sf_status"/>
                     <field name="priority"/>

@@ -143,7 +143,7 @@ class AccountAccount(models.Model):
                 update_account_import = self.env['ir.config_parameter'].sudo().get_param(
                     'pragmatic_quickbooks_connector.update_account_import')
                 if update_account_import:
-                    print('\n\n Vals : ', vals)
+                    # print('\n\n Vals : ', vals)
                     if brw_acc_type.name == 'Receivable' or brw_acc_type.name == 'Payable':
                         move_lines = self.env['account.move.line'].search([('account_id', 'in', [acc.id])], limit=1)
                         if not len(move_lines):

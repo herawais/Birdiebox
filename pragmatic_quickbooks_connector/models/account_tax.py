@@ -176,7 +176,7 @@ class AccountTax(models.Model):
             elif 'EffectiveTaxRate' in res.get('TaxRate'):
                 for value in res.get('TaxRate').get('EffectiveTaxRate'):
                     if not value.get('EndDate'):
-                        print('RateValue : \n', value)
+                        # print('RateValue : \n', value)
                         TaxRateValue = float(value.get('RateValue') or 0)
                         break
 
@@ -196,7 +196,7 @@ class AccountTax(models.Model):
             if not tax_obj:
                 tax_obj = self.create(vals)
             else:
-                print('\n\nVals : ',vals)
+                # print('\n\nVals : ',vals)
                 tax_obj.write(vals)
 
             self.env.cr.commit()

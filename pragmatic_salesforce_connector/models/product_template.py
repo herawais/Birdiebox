@@ -159,8 +159,8 @@ class ProductTemplateCust(models.Model):
             product_dict['IsActive'] = 'true'
         else:
             product_dict['IsActive'] = 'false'
-        if self.description_sale:
-            product_dict['Description'] = self.description_sale
+        if self.description:
+            product_dict['Description'] = self.description
         if self.default_code:
             product_dict['SKU__c'] = self.default_code
         if self.x_studio_brand:

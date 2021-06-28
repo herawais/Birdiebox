@@ -114,6 +114,9 @@ class BulkSale(models.Model):
     def create_child_sale_order(self, create_order_lines=False):
         SALE = self.env['sale.order']
         for record in self:
+            has_intials = False
+            has_box_name = False
+            has_monogram = False
             if record.created_sale_order:
                 return
 
@@ -136,6 +139,7 @@ class BulkSale(models.Model):
                                 ' selected but no "Initials" were imported for '
                                 + record.name + '.')
                         else:
+                            has_intials = True
                             line.x_studio_customization_notes = record.initials
                     elif line.x_studio_customization_detail in [
                             'Full Name', 'Logo and Name'
@@ -146,6 +150,7 @@ class BulkSale(models.Model):
                                 ' selected but no "Box Name" imported for ' +
                                 record.name + '.')
                         else:
+                            has_box_name = True
                             line.x_studio_customization_notes = record.box_name
                     elif line.x_studio_customization_detail == 'First Letter and Name':
                         if not record.monogram:
@@ -154,6 +159,7 @@ class BulkSale(models.Model):
                                 ' selected but no "Monogram" imported for ' +
                                 record.name + '.')
                         else:
+                            has_monogram = True
                             line.x_studio_customization_notes = record.monogram
 
             partner = record.create_partner()
@@ -219,3 +225,13 @@ class BulkSale(models.Model):
             created_sale.action_confirm()
 
             record.sale_order_created = True
+
+            for line in create_order_lines:
+                if line.x_studio_customization_detail == 'Initial' and has_intials:
+                    line.x_studio_customization_notes = False
+                elif line.x_studio_customization_detail in [
+                    'Full Name', 'Logo and Name'
+                ] and has_box_name:
+                    line.x_studio_customization_notes = False
+                elif line.x_studio_customization_detail == 'First Letter and Name' and has_monogram:
+                    line.x_studio_customization_notes = False

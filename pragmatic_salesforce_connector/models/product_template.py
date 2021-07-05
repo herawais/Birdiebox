@@ -99,8 +99,11 @@ class ProductTemplateCust(models.Model):
                 exsiting_endpoint = "/services/data/v40.0/query/?q=select Id from product2 where sku__c = '{}'".format(
                    product_dict['SKU__c'])
                 exsting_res = requests.request('GET', sf_config.sf_url + exsiting_endpoint, headers=headers)
-                _logger.info("==== exsiting%s", exsting_res.text)
-                if exsting_res:
+                exsting_res_dict = json.loads(exsting_res.text)
+                endpoint = '/services/data/v39.0/sobjects/product2'
+
+                _logger.info("==== exsiting%s in sku", exsting_res.text)
+                if exsting_res_dict['totalSize'] > 0:
                     if exsting_res.status_code == 200:
                         parsed_resp = json.loads(str(exsting_res.text))
                         if parsed_resp.get('records') and parsed_resp.get('records')[0].get('Id'):
@@ -113,9 +116,20 @@ class ProductTemplateCust(models.Model):
                         else:
                             pass
                     else:
+
                         pass
                 else:
-                    pass
+                    payload = json.dumps(product_dict)
+                    res = requests.request('POST', sf_config.sf_url + endpoint, headers=headers, data=payload)
+                    _logger.info("==== new res %ssku", res)
+                    if res.status_code in [200, 201]:
+                        parsed_resp = json.loads(str(res.text))
+                        self.x_salesforce_exported = True
+                        self.x_salesforce_id = parsed_resp.get('id')
+                        for prod_temp in self:
+                            for product in prod_temp.product_variant_ids:
+                                product.x_salesforce_id = self.x_salesforce_id
+                                product.x_salesforce_exported = True
             elif 'Name' in product_dict and not self.x_salesforce_id:
                 exsiting_endpoint = "/services/data/v40.0/query/?q=select Id from product2 where name = '{}'".format(
                     product_dict['Name'])

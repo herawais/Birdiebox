@@ -19,6 +19,12 @@ class CustomStockPicking(models.Model):
 
         return res
 
+    def write(self, vals):
+        if 'date_done' in vals and self.picking_type_id.id == 2:
+            self.update_delivered_qty()
+
+        return super(CustomStockPicking, self).write(vals)
+
     def validate_kitting(self):
         for record in self:
             pickings = record.sale_id.picking_ids.filtered(
@@ -32,3 +38,12 @@ class CustomStockPicking(models.Model):
                 raise ValidationError(
                     'You cannot complete kitting until the following operations have been completed: \n'
                     + incomplete)
+
+    def update_delivered_qty(self):
+        parent_sale_order = self.sale_id.x_studio_related_sales_order
+
+        if parent_sale_order:
+            for product in parent_sale_order.order_line:
+                for line in self.move_line_ids:
+                    if line.product_id == product.product_id:
+                        product.qty_delivered = line.qty_done + product.qty_delivered

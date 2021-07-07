@@ -1614,7 +1614,6 @@ class ResCompany(models.Model):
                 if data:
                     recs = []
                     parsed_data = json.loads(str(data.text))
-                    print("\\n=== parsed_data==", parsed_data)
                     if parsed_data:
                         for p in parsed_data.get('records'):
                             recs.append(p.get('Id'))
@@ -1622,7 +1621,6 @@ class ResCompany(models.Model):
                     for rec in recs:
                         opportunity_dict = {}
                         opportunity_read = self.fetch_sf_opportunity_details(rec)
-                        print("\\n=== opportunity_read==",opportunity_read)
                         ''' PREPARE DICT FOR INSERTING IN CRM.LEAD '''
                         if opportunity_read.get('Name'):
                             opportunity_dict['name'] = opportunity_read.get('Name')
@@ -1779,7 +1777,6 @@ class ResCompany(models.Model):
 
             if event_dict:
                 res = event_obj.sudo().create(event_dict)
-                print("\n\n-- res ---",res)
                 if res:
                     ''' Write x_salesforce_id '''
                     res.sudo().write({'x_salesforce_id': sf_id})
@@ -1886,7 +1883,6 @@ class ResCompany(models.Model):
                 if data:
                     recs = []
                     parsed_data = json.loads(str(data.text))
-                    print("\n\n==== data ----",parsed_data)
                     if parsed_data:
                         for p in parsed_data.get('records'):
                             recs.append(p.get('Id'))
@@ -1895,7 +1891,6 @@ class ResCompany(models.Model):
                         activity_dict = {}
                         activity_read = self.fetch_sf_activity_details(rec)
                         ''' PREPARE DICT FOR INSERTING IN MAIL.ACTIVITY '''
-                        print("\n\n---activity_read--- ",activity_read)
                         if activity_read.get('WhoId'):
                             result = self.sf_createOdooParentId_Activity(activity_read.get('WhoId'),search_for='contact')
                             if result:

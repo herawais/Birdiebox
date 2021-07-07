@@ -95,13 +95,11 @@ class ProductTemplateCust(models.Model):
             headers['Accept'] = 'application/json'
             exsting_res =''
             if 'SKU__c' in product_dict and not self.x_salesforce_id:
-
                 exsiting_endpoint = "/services/data/v40.0/query/?q=select Id from product2 where sku__c = '{}'".format(
                    product_dict['SKU__c'])
                 exsting_res = requests.request('GET', sf_config.sf_url + exsiting_endpoint, headers=headers)
                 exsting_res_dict = json.loads(exsting_res.text)
                 endpoint = '/services/data/v39.0/sobjects/product2'
-
                 _logger.info("==== exsiting%s in sku", exsting_res.text)
                 if exsting_res_dict['totalSize'] > 0:
                     if exsting_res.status_code == 200:
@@ -113,29 +111,25 @@ class ProductTemplateCust(models.Model):
                                 for product in prod_temp.product_variant_ids:
                                     product.x_salesforce_id = self.x_salesforce_id
                                     product.x_salesforce_exported = True
+                            payload = json.dumps(product_dict)
+
+                            res = requests.request('PATCH', sf_config.sf_url + endpoint + '/' + self.x_salesforce_id,
+                                                   headers=headers,
+                                                   data=payload)
+                            if res.status_code == 204:
+                                _logger.info("SKU wise updated product sucessfully")
                         else:
                             pass
                     else:
-
                         pass
-                else:
-                    payload = json.dumps(product_dict)
-                    res = requests.request('POST', sf_config.sf_url + endpoint, headers=headers, data=payload)
-                    _logger.info("==== new res %ssku", res)
-                    if res.status_code in [200, 201]:
-                        parsed_resp = json.loads(str(res.text))
-                        self.x_salesforce_exported = True
-                        self.x_salesforce_id = parsed_resp.get('id')
-                        for prod_temp in self:
-                            for product in prod_temp.product_variant_ids:
-                                product.x_salesforce_id = self.x_salesforce_id
-                                product.x_salesforce_exported = True
+
             elif 'Name' in product_dict and not self.x_salesforce_id:
                 exsiting_endpoint = "/services/data/v40.0/query/?q=select Id from product2 where name = '{}'".format(
                     product_dict['Name'])
                 exsting_res = requests.request('GET', sf_config.sf_url + exsiting_endpoint, headers=headers)
                 exsting_res_dict = json.loads(exsting_res.text)
-                _logger.info("==== exsiting%s",exsting_res)
+                endpoint = '/services/data/v39.0/sobjects/product2'
+                _logger.info("==== exsiting name%s",exsting_res)
                 if exsting_res_dict['totalSize'] > 0:
                     if exsting_res.status_code == 200:
                         parsed_resp = json.loads(str(exsting_res.text))
@@ -146,40 +140,26 @@ class ProductTemplateCust(models.Model):
                                 for product in prod_temp.product_variant_ids:
                                     product.x_salesforce_id = self.x_salesforce_id
                                     product.x_salesforce_exported = True
+                            payload = json.dumps(product_dict)
+                            res = requests.request('PATCH', sf_config.sf_url + endpoint + '/' + self.x_salesforce_id,
+                                                   headers=headers,
+                                                   data=payload)
+                            if res.status_code == 204:
+                                _logger.info("Name wise updated product sucessfully")
                         else:
                             pass
                 else:
-                    endpoint = '/services/data/v39.0/sobjects/product2'
-
                     payload = json.dumps(product_dict)
-                    _logger.info("=== self.salesforce_id====%s", self.x_salesforce_id)
-                    if self.x_salesforce_id:
-                        ''' Try Updating it if already exported '''
-                        res = requests.request('PATCH', sf_config.sf_url + endpoint + '/' + self.x_salesforce_id, headers=headers,
-                                               data=payload)
-                        if res.status_code == 204:
-                            self.x_is_updated = True
-                            for prod_temp in self:
-                                for product in prod_temp.product_variant_ids:
-                                    product.x_salesforce_id = self.x_salesforce_id
-                                    product.x_salesforce_exported = True
-                        else:
-                            pass
-                    else:
-                        res = requests.request('POST', sf_config.sf_url + endpoint, headers=headers, data=payload)
-                        _logger.info("==== new res %s", res)
-                        if res.status_code in [200, 201]:
-                            parsed_resp = json.loads(str(res.text))
-                            self.x_salesforce_exported = True
-                            self.x_salesforce_id = parsed_resp.get('id')
-                            for prod_temp in self:
-                                for product in prod_temp.product_variant_ids:
-                                    product.x_salesforce_id = self.x_salesforce_id
-                                    product.x_salesforce_exported = True
-                        else:
-                            pass
-            else:
-                pass
+                    res = requests.request('POST', sf_config.sf_url + endpoint, headers=headers, data=payload)
+                    _logger.info("==== new res %s", res)
+                    if res.status_code in [200, 201]:
+                        parsed_resp = json.loads(str(res.text))
+                        self.x_salesforce_exported = True
+                        self.x_salesforce_id = parsed_resp.get('id')
+                        for prod_temp in self:
+                            for product in prod_temp.product_variant_ids:
+                                product.x_salesforce_id = self.x_salesforce_id
+                                product.x_salesforce_exported = True
 
     def exportProduct_Template_to_sf(self):
         if len(self) > 1:

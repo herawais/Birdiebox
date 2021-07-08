@@ -161,6 +161,16 @@ class ProductTemplateCust(models.Model):
                                 product.x_salesforce_id = self.x_salesforce_id
                                 product.x_salesforce_exported = True
 
+            elif self.x_salesforce_id:
+                endpoint = '/services/data/v39.0/sobjects/product2'
+                payload = json.dumps(product_dict)
+                res = requests.request('PATCH', sf_config.sf_url + endpoint + '/' + self.x_salesforce_id,
+                                       headers=headers,
+                                       data=payload)
+                if res.status_code == 204:
+                    _logger.info("Updated product sucessfully")
+
+
     def exportProduct_Template_to_sf(self):
         if len(self) > 1:
             raise UserError(_("Please Select 1 record to Export"))

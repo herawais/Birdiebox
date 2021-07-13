@@ -48,6 +48,12 @@ class CustomProductProduct(models.Model):
 
     def action_add_reordering_rule(self):
         Reorder = self.env['stock.warehouse.orderpoint']
+        rule = self.env['stock.rule'].search([('name', 'ilike', 'scheduler')])
+
+        if not rule:
+            raise ValidationError(
+                'Please set up the stock rule with the name scheduler')
+
         for record in self:
             body = {
                 'trigger': 'auto',
@@ -59,6 +65,6 @@ class CustomProductProduct(models.Model):
                 'product_max_qty': 0.0,
                 'qty_multiple': 1.0,
                 'company_id': 1,
-                'rule_ids': [82],
+                'rule_ids': rule.ids,
             }
             Reorder.create(body)

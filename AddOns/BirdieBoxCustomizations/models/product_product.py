@@ -35,9 +35,12 @@ class CustomProductProduct(models.Model):
              [x['product_id']['id'] for x in active_reordering])
         ])
 
-        for product in split_every(10, products.ids):
-            self.browse(product).action_add_reordering_rule()
-            self._cr.commit()
+        for product in products:
+            product.action_add_reordering_rule()
+
+        # for product in split_every(10, products.ids):
+        #     self.browse(product).action_add_reordering_rule()
+        #     self._cr.commit()
 
     @api.model
     def create(self, vals):

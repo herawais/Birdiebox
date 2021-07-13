@@ -55,16 +55,19 @@ class CustomProductProduct(models.Model):
                 'Please set up the stock rule with the name scheduler')
 
         for record in self:
-            body = {
-                'trigger': 'auto',
-                'warehouse_id': 1,
-                'location_id': 8,
-                'product_id': record.id,
-                'product_category_id': record.categ_id.id,
-                'product_min_qty': 0.0,
-                'product_max_qty': 0.0,
-                'qty_multiple': 1.0,
-                'company_id': 1,
-                'rule_ids': rule.ids,
-            }
-            Reorder.create(body)
+            if not Reorder.search([('product_id', '=', record.id),
+                                   ('location_id', '=', 8)]):
+                body = {
+                    'trigger': 'auto',
+                    'warehouse_id': 1,
+                    'location_id': 8,
+                    'product_id': record.id,
+                    'product_category_id': record.categ_id.id,
+                    'product_min_qty': 0.0,
+                    'product_max_qty': 0.0,
+                    'qty_multiple': 1.0,
+                    'company_id': 1,
+                    'rule_ids': rule.ids,
+                }
+
+                Reorder.create(body)

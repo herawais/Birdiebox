@@ -1,7 +1,7 @@
 {
     'name': 'Odoo SalesForce Connector',
     'author': 'Pragmatic TechSoft Pvt Ltd.',
-    'version': '14.0.4',
+    'version': '14.0.15',
     'website': 'http://www.pragtech.co.in',
     'summary': '2 way SalesForce connector Odoo SalesForce Connector odoo salesforce integration crm app',
     'depends': ['sale_management', 'product','crm'],
@@ -34,7 +34,7 @@ crm app
     'live_test_url': 'http://www.pragtech.co.in/company/proposal-form.html?id=103&name=Odoo-Salesforce-Connector',
     'currency': 'USD',
     'license': 'OPL-1',
-    'price': 249.00,
+    'price': 450.00,
     'installable': True,
     'application': True,
     'auto_install': False,

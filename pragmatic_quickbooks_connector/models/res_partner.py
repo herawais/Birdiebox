@@ -240,7 +240,7 @@ class ResPartner(models.Model):
             raise UserError("It seems that all of the Customers/Vendors are already imported.")
         for partner in partners:
             vals = self._prepare_partner_dict(partner, is_customer=is_customer, is_vendor=is_vendor)
-            print("\n\n\npartner  : ", partner, '\n\n\n\n')
+            # print("\n\n\npartner  : ", partner, '\n\n\n\n')
             _logger.info("VALS FOUND OUT IS !!!!!!!!!!!!---> {}".format(vals))
             brw_partner = self.search([('qbo_customer_id', '=', partner.get('Id'))], limit=1)
             _logger.info("Browsing partner************ {}".format(brw_partner))
@@ -463,6 +463,23 @@ class ResPartner(models.Model):
                     return parsed_result.get('Customer').get('Id')
                 else:
                     return False
+
+            elif result.status_code == 400:
+                response = result.json()
+                error = None
+                if response.get('Fault'):
+                    if response.get('Fault').get('Error'):
+                        for message in response.get('Fault').get('Error'):
+                            if message.get('code') == '6240': # updated existing qbo id
+                                partner_object = self.env['res.partner'].search([('customer_rank', '=', True), ('name', '=', dict.get('GivenName'))])
+                                if partner_object:
+                                    customer_qbo_id = self.checkPartnerInQuickbooks(partner_object)
+                                    partner_object.write({'qbo_customer_id': customer_qbo_id })
+                                    partner_object._cr.commit()
+
+                            if message.get('Detail') and message.get('Message'):
+                                error = message.get('Detail')
+                                _logger.warning(_("Error Form Qbo : %s" % error))
             else:
                 self.env['qbo.logger'].create({
                     'odoo_name':dict.get('DisplayName'),
@@ -540,6 +557,23 @@ class ResPartner(models.Model):
                     return parsed_result.get('Vendor').get('Id')
                 else:
                     return False
+            elif result.status_code == 400:
+                response = result.json()
+                error = None
+                if response.get('Fault'):
+                    if response.get('Fault').get('Error'):
+                        for message in response.get('Fault').get('Error'):
+                            if message.get('code') == '6240': # updated existing qbo id
+                                partner_object = self.env['res.partner'].search([('supplier_rank','=',True),('name', '=', dict.get('GivenName'))])
+                                if partner_object:
+                                    vendor_qbo_id = self.checkPartnerInQuickbooks(partner_object)
+                                    partner_object.write({'qbo_vendor_id': vendor_qbo_id })
+                                    partner_object._cr.commit()
+
+                            if message.get('Detail') and message.get('Message'):
+                                error = message.get('Detail')
+                                _logger.warning(_("Error Form Qbo : %s" % error))
+                                raise UserError(_("Qbo Error : %s" %error))
             else:
                 self.env['qbo.logger'].create({
                     'odoo_name':dict.get('DisplayName'),
@@ -1021,7 +1055,6 @@ class ResPartner(models.Model):
             Quickbooks if present if present then make sub customer else first create that company in Quickbooks and
             attach its reference.
             '''
-
             if self.parent_id:
                 ''' Check self.parent_id.name in Quickbooks '''
                 customer_id_retrieved = self.checkPartnerInQuickbooks(self.parent_id)

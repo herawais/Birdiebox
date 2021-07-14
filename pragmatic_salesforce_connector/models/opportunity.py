@@ -63,6 +63,17 @@ class CRMOpportunity(models.Model):
             opportunity_dict['CloseDate'] = str(self.date_deadline)
         if self.stage_id:
             opportunity_dict['StageName'] =  self.stage_id.name
+        if self.partner_id and self.partner_id.x_salesforce_id:
+            opportunity_dict['AccountId'] = str(self.partner_id.x_salesforce_id)
+        elif self.partner_id and not self.partner_id.x_salesforce_id:
+            partner_export = self.partner_id.exportPartner_to_sf()
+            opportunity_dict['AccountId'] = str(self.partner_id.x_salesforce_id)
+        if self.probability:
+            opportunity_dict['Probability'] = self.probability
+        if self.expected_revenue:
+            opportunity_dict['Amount'] = self.expected_revenue
+        if self.description:
+            opportunity_dict['Description'] = self.description
         result = self.sendOpportunityDataToSf(opportunity_dict)
         if result:
             self.x_salesforce_exported_oppo = True

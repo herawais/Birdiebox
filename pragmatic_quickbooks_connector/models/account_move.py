@@ -1475,11 +1475,11 @@ class AccountInvoice(models.Model):
                         elif invoice.partner_id.supplier_rank:
                             result = requests.request('POST', quickbook_config.url + str(realmId) + "/bill",
                                                       headers=headers, data=parsed_dict)
-                        print("___________________1", result.text,parsed_dict)
+                        # print("___________________1", result.text,parsed_dict)
 
                         if result.status_code == 200:
                             response = quickbook_config.convert_xmltodict(result.text)
-                            print("___________________1", response, parsed_dict)
+                            # print("___________________1", response, parsed_dict)
                             # update QBO invoice id
                             if invoice.partner_id.customer_rank:
                                 invoice.qbo_invoice_id = response.get('IntuitResponse').get('Invoice').get('Id')

@@ -753,7 +753,7 @@ class ProductProduct(models.Model):
                                                     'message': 'Quickbooks Online Exception \n\n' + message.get('Detail'),
                                                     'created_date': datetime.now(),
                                                 })
-                                                print('\n\n\n____________________________________',message.get('Detail'))
+                                                # print('\n\n\n____________________________________',message.get('Detail'))
                                                 raise UserError('Quickbooks Online Exception \n\n'+ message.get('Detail'))
                                                 self._cr.commit
                                                 return False

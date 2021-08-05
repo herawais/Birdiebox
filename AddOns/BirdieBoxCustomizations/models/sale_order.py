@@ -16,15 +16,3 @@ class CustomSaleOrder(models.Model):
            self.state = 'sale'
         else:
             return super(CustomSaleOrder, self).action_confirm()
-
-
-class CustomSaleOrderLine(models.Model):
-    _inherit = 'sale.order.line'
-
-    def _action_launch_stock_rule(self, previous_product_uom_qty=False):
-        for line in self:
-            if line.order_id.x_studio_shipping_type in ['Individual', 'Bulk Freight and Individual', 'Bulk Ground and Individual'] and not line.order_id.x_studio_related_sales_order:
-                return
-            else:
-                return super(CustomSaleOrderLine, line)._action_launch_stock_rule(previous_product_uom_qty)
-       

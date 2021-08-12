@@ -14,7 +14,7 @@ class CustomStockPicking(models.Model):
     def button_validate(self):
         res = super(CustomStockPicking, self).button_validate()
 
-        if self.picking_type_id.id == 12:
+        if self.picking_type_id.x_require_pickings_complete:
             self.validate_kitting()
 
         return res

@@ -20,7 +20,8 @@
     'data': [
         'security/ir.model.access.csv', 'views/bulk_sale.xml',
         'wizards/bulk_sale_create_wizard.xml',
-        'views/report_stock_forecasted.xml'
+        'views/report_stock_forecasted.xml',
+        'views/stock_picking_type_form.xml'
     ],
     'application':
     True,

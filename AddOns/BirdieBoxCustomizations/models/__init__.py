@@ -5,3 +5,6 @@ from . import stock_picking
 from . import product_product
 from . import stock_orderpoint
 from . import stock_picking_type
+from . import res_partner
+from . import res_users
+from . import res_printers

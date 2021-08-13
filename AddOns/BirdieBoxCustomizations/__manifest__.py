@@ -23,7 +23,7 @@
         'views/report_stock_forecasted.xml',
         'views/stock_picking_type_form.xml',
         'views/printers.xml',
-        # 'views/res_users_menu.xml'
+        'views/res_users_menu.xml'
     ],
     'application':
     True,

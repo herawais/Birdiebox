@@ -2,3 +2,5 @@ id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_bulk_sale,bulk.sale.access,model_bulk_sale,base.group_user,1,1,1,1
 access_bulk_sale_wizard,bulk.sale.create.access,model_bulk_sale_create,base.group_user,1,1,1,1
 access_bulk_sale_wizard_line,bulk.sale.create.line.access,model_bulk_sale_create_line,base.group_user,1,1,1,1
+access_res_printers,res.printers.access,model_res_printers,base.group_user,1,1,1,1
+access_res_printer_settings,res.printer.settings.access,model_res_printer_settings,base.group_user,1,1,1,1

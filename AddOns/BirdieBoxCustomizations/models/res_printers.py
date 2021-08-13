@@ -87,14 +87,11 @@ class BohmPrinterSettings(models.Model):
             )
 
             for printer in response.json()["data"]:
-                _logger.debug("**** PRINTER :: %s", printer)
                 printer_id = self.env["res.printers"].search([
                     ("name", "=", printer["name"])
                 ])
 
                 if not printer_id:
-                    _logger.debug(
-                        "**** NOPE, NO PRINTER FOR NAME :: %s", printer["name"])
                     self.env["res.printers"].create({
                         "name": printer["name"],
                         "type": printer["type"],
@@ -102,7 +99,6 @@ class BohmPrinterSettings(models.Model):
                         "settings_id": self.id
                     })
                 else:
-                    _logger.debug("**** FOUND PRINTER :: %s", printer_id.name)
                     printer_id.write({
                         "type": printer["type"],
                         "printer_id": printer["id"],

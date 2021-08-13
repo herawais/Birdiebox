@@ -18,7 +18,7 @@
               <page string="Available Printers">
                 <group>
                   <field name="printer_service_base_url"/>
-                  <field name="printer_service_jwt_secret" />
+                  <field name="printer_service_jwt_secret" password="1"/>
                 </group>
                 <field name="printer_ids">
                   <tree create="false" delete="false" editable="false">

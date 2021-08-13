@@ -1,5 +1,10 @@
 # -*- coding: utf-8 -*-
 import logging
+import requests
+import datetime
+import jwt
+import time
+import json
 
 from odoo import _, api, fields, models
 from odoo.exceptions import ValidationError
@@ -52,7 +57,55 @@ class CustomStockPicking(models.Model):
                         product.qty_delivered = line.qty_done + product.qty_delivered
 
     def print_shipping_label(self):
-        _logger.debug('\n\n\n Printing Shipping \n%s', self._get_shipping_label())
+        print_service = self.env['res.printer.settings'].search([],limit=1)
+        printer_pref = self.env["res.users"].search([
+                ("id", "=", self.env.context.get("uid"))
+            ], limit=1)
+        
+        if not print_service:
+            raise ValidationError('The print service has not been configured, Please contact an administrator.')
+        
+        if printer_pref.x_default_packing_printer:
+            printer = printer_pref.x_default_packing_printer.name
+        else:
+            raise ValidationError('Please set a printer in your user settings.')
+        
+        shipping_labels = self._get_shipping_label()
+        
+        if not len(shipping_labels):
+            raise ValidationError('No Label Found to Print.')
+        
+        payload = {
+            "shipping_labels": shipping_labels,
+            "printer": printer
+        }
+
+        exp = (datetime.datetime.now() + datetime.timedelta(minutes=15))
+
+        encoded_jwt = jwt.encode({
+            "bindle": {
+                "purpose": "print shipping label",
+                "source": "Odoo"
+            },
+            "iat": datetime.datetime.now(),
+            "exp": time.mktime(exp.timetuple())
+        },
+            print_service.printer_service_jwt_secret,
+            algorithm="HS256"
+        )
+        
+        url = print_service.printer_service_base_url + "print/" + \
+                printer + "/shipping_label"
+        
+        response = requests.post(
+            url,
+            timeout=10,
+            headers={
+                "Authorization": "Bearer " + encoded_jwt.decode("utf-8"),
+                "Content-Type": "application/json"
+            },
+            data=json.dumps(payload)
+        )
 
    
     def _get_shipping_label(self):
@@ -75,7 +128,5 @@ class CustomStockPicking(models.Model):
                             "img": b"EndiciaLableError".decode("utf-8") or ""
                         })
 
-        if len(attachments) > 0:
-            return [attachments[0]]
-        else:
-            return attachments
+        
+        return attachments

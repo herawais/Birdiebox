@@ -5,6 +5,7 @@ import requests
 import datetime
 import jwt
 import time
+from odoo.exceptions import ValidationError
 
 _logger = logging.getLogger(__name__)
 
@@ -85,6 +86,16 @@ class BohmPrinterSettings(models.Model):
                     "Content-Type": "application/json"
                 }
             )
+
+            if not response.status_code != 200:
+                raise ValidationError('Could not connect to print server.')
+
+            current_printers = self.env["res.printers"].search([
+                ("type", "!=", False)
+            ])
+
+            for printer in current_printers:
+                printer.unlink()
 
             for printer in response.json()["data"]:
                 printer_id = self.env["res.printers"].search([

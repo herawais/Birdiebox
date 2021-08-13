@@ -16,16 +16,3 @@ class CustomResPartner(models.Model):
         string='Default Packing Printer',
         default=False
     )
-
-    # def __init__(self, pool, cr):
-    #     """ Override of __init__ to add access rights.
-    #         Access rights are disabled by default, but allowed
-    #         on some specific fields defined in self.SELF_{READ/WRITE}ABLE_FIELDS.
-    #     """
-    #     readable_fields = [
-    #         'x_default_packing_printer',
-    #     ]
-    #     init_res = super(CustomResPartner, self).__init__(pool, cr)
-    #     # duplicate list to avoid modifying the original reference
-    #     type(self).SELF_READABLE_FIELDS = readable_fields + type(self).SELF_READABLE_FIELDS
-    #     return init_res

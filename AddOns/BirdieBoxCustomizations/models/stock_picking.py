@@ -17,6 +17,9 @@ class CustomStockPicking(models.Model):
         if self.picking_type_id.x_require_pickings_complete:
             self.validate_kitting()
 
+        if self.picking_type_id.x_print_shipping_label and self.carrier_id:
+            self.print_shipping_label()
+        
         return res
 
     def write(self, vals):
@@ -47,3 +50,32 @@ class CustomStockPicking(models.Model):
                 for line in self.move_line_ids:
                     if line.product_id == product.product_id:
                         product.qty_delivered = line.qty_done + product.qty_delivered
+
+    def print_shipping_label(self):
+        _logger.debug('\n\n\n Printing Shipping \n%s', self._get_shipping_label())
+
+   
+    def _get_shipping_label(self):
+        self.ensure_one()
+        attachments = []
+
+        for message_id in self.message_ids:
+            if len(message_id.attachment_ids) > 0:
+                for attachment_id in message_id.attachment_ids:
+                    try:
+                        attachments.append({
+                            "name": attachment_id.name or "",
+                            "img_type": attachment_id.name.split(".")[-1] or "",
+                            "img": attachment_id.datas.decode("utf-8") or ""
+                        })
+                    except:
+                        attachments.append({
+                            "name": attachment_id.name or "",
+                            "img_type": attachment_id.name.split(".")[-1] or "",
+                            "img": b"EndiciaLableError".decode("utf-8") or ""
+                        })
+
+        if len(attachments) > 0:
+            return [attachments[0]]
+        else:
+            return attachments

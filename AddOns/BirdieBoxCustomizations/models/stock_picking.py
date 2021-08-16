@@ -17,15 +17,15 @@ class CustomStockPicking(models.Model):
     _inherit = 'stock.picking'
 
     def button_validate(self):
-        res = super(CustomStockPicking, self).button_validate()
-
         if self.picking_type_id.x_require_pickings_complete:
             self.validate_kitting()
+        
+        picking = super(CustomStockPicking, self).button_validate()
 
         if self.picking_type_id.x_print_shipping_label and self.carrier_id:
             self.print_shipping_label()
         
-        return res
+        return picking
 
     def write(self, vals):
         if 'date_done' in vals and self.picking_type_id.id == 2:
@@ -57,6 +57,7 @@ class CustomStockPicking(models.Model):
                         product.qty_delivered = line.qty_done + product.qty_delivered
 
     def print_shipping_label(self):
+        self.ensure_one()
         print_service = self.env['res.printer.settings'].search([],limit=1)
         printer_pref = self.env["res.users"].search([
                 ("id", "=", self.env.context.get("uid"))

@@ -19,12 +19,12 @@ class CustomStockPicking(models.Model):
     def button_validate(self):
         if self.picking_type_id.x_require_pickings_complete:
             self.validate_kitting()
-        
+
         picking = super(CustomStockPicking, self).button_validate()
 
         if self.picking_type_id.x_print_shipping_label and self.carrier_id:
             self.print_shipping_label()
-        
+
         return picking
 
     def write(self, vals):
@@ -58,57 +58,55 @@ class CustomStockPicking(models.Model):
 
     def print_shipping_label(self):
         self.ensure_one()
-        print_service = self.env['res.printer.settings'].search([],limit=1)
-        printer_pref = self.env["res.users"].search([
-                ("id", "=", self.env.context.get("uid"))
-            ], limit=1)
-        
+        print_service = self.env['res.printer.settings'].search([], limit=1)
+        printer_pref = self.env["res.users"].search(
+            [("id", "=", self.env.context.get("uid"))], limit=1)
+
         if not print_service:
-            raise ValidationError('The print service has not been configured, Please contact an administrator.')
-        
+            raise ValidationError(
+                'The print service has not been configured, Please contact an administrator.'
+            )
+
         if printer_pref.x_default_packing_printer:
             printer = printer_pref.x_default_packing_printer.name
         else:
-            raise ValidationError('Please set a printer in your user settings.')
-        
+            raise ValidationError(
+                'Please set a printer in your user settings.')
+
         shipping_labels = self._get_shipping_label()
-        
+
         if not len(shipping_labels):
             raise ValidationError('No Label Found to Print.')
-        
-        payload = {
-            "shipping_labels": shipping_labels,
-            "printer": printer
-        }
+
+        payload = {"shipping_labels": shipping_labels, "printer": printer}
 
         exp = (datetime.datetime.now() + datetime.timedelta(minutes=15))
 
-        encoded_jwt = jwt.encode({
-            "bindle": {
-                "purpose": "print shipping label",
-                "source": "Odoo"
+        encoded_jwt = jwt.encode(
+            {
+                "bindle": {
+                    "purpose": "print shipping label",
+                    "source": "Odoo"
+                },
+                "iat": datetime.datetime.now(),
+                "exp": time.mktime(exp.timetuple())
             },
-            "iat": datetime.datetime.now(),
-            "exp": time.mktime(exp.timetuple())
-        },
             print_service.printer_service_jwt_secret,
-            algorithm="HS256"
-        )
-        
+            algorithm="HS256")
+
         url = print_service.printer_service_base_url + "print/" + \
                 printer + "/shipping_label"
-        
-        response = requests.post(
-            url,
-            timeout=10,
-            headers={
-                "Authorization": "Bearer " + encoded_jwt.decode("utf-8"),
-                "Content-Type": "application/json"
-            },
-            data=json.dumps(payload)
-        )
 
-   
+        response = requests.post(url,
+                                 timeout=10,
+                                 headers={
+                                     "Authorization":
+                                     "Bearer " + encoded_jwt.decode("utf-8"),
+                                     "Content-Type":
+                                     "application/json"
+                                 },
+                                 data=json.dumps(payload))
+
     def _get_shipping_label(self):
         self.ensure_one()
         attachments = []
@@ -118,16 +116,14 @@ class CustomStockPicking(models.Model):
                 for attachment_id in message_id.attachment_ids:
                     try:
                         attachments.append({
-                            "name": attachment_id.name or "",
-                            "img_type": attachment_id.name.split(".")[-1] or "",
-                            "img": attachment_id.datas.decode("utf-8") or ""
+                            "name":
+                            attachment_id.name or "",
+                            "img_type":
+                            attachment_id.name.split(".")[-1] or "",
+                            "img":
+                            attachment_id.datas.decode("utf-8") or ""
                         })
-                    except:
-                        attachments.append({
-                            "name": attachment_id.name or "",
-                            "img_type": attachment_id.name.split(".")[-1] or "",
-                            "img": b"EndiciaLableError".decode("utf-8") or ""
-                        })
+                    except Exception as e:
+                        raise ValidationError('Unable To Generate Label \n- %s', e)
 
-        
         return attachments

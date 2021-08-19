@@ -466,16 +466,22 @@ class ResCompany(models.Model):
                 if sf_modified_dt > res_partner_srch.x_last_modified_on:
                     contact_dict = self.create_odoo_sf_contact_dictionary(sf_cust_det)
                     parent_record_written = res_partner_srch.sudo().write(contact_dict)
+                    if parent_record_written:
+                        res_partner_srch._cr.commit()
                     return True
                 else:
                     return True
             else:
                 contact_dict = self.create_odoo_sf_contact_dictionary(sf_cust_det)
                 parent_record_written = res_partner_srch.sudo().write(contact_dict)
+                if parent_record_written:
+                    res_partner_srch._cr.commit()
                 return True
         else:
             contact_dict = self.create_odoo_sf_contact_dictionary(sf_cust_det)
             partner_create_id = self.env['res.partner'].sudo().create(contact_dict)
+            if partner_create_id:
+                partner_create_id._cr.commit()
             return True
         return False
 
@@ -1287,13 +1293,12 @@ class ResCompany(models.Model):
                 partner_dict['country_id'] = country_id.id
         if sf_contact_info.get('MailingState', False):
             sf_state = sf_contact_info.get('MailingState')
-            state_id = self.env['res.country.state'].search([('name', '=', sf_state)], limit=1)
+            state_id = self.env['res.country.state'].search([('code', '=', sf_state)], limit=1)
             if state_id:
                 partner_dict['state_id'] = state_id.id
-            elif sf_state and partner_dict.get('country_id', False):
-                state_id = self.env['res.country.state'].sudo().create({'name': sf_state,
-                                                                 'code': sf_state,
-                                                                 'country_id': partner_dict.get('country_id'),})
+            elif sf_state and not state_id and partner_dict.get('country_id'):
+                res_country_state_dict = {'name': sf_state, 'code': sf_state, 'country_id': partner_dict.get('country_id')}
+                state_id = self.env['res.country.state'].sudo().create(res_country_state_dict)
                 partner_dict['state_id'] = state_id.id
         if sf_contact_info.get('MailingPostalCode', False):
             partner_dict['zip'] = sf_contact_info.get('MailingPostalCode')
@@ -1331,13 +1336,12 @@ class ResCompany(models.Model):
                 partner_dict['country_id'] = country_id.id
         sf_state = sf_account_info.get('BillingAddress') and sf_account_info.get('BillingAddress').get('state')
         if sf_state:
-            state_id = self.env['res.country.state'].search([('name', '=', sf_state)], limit=1)
+            state_id = self.env['res.country.state'].search([('code', '=', sf_state)], limit=1)
             if state_id:
                 partner_dict['state_id'] = state_id.id
-            elif partner_dict.get('country_id', False):
-                state_id = self.env['res.country.state'].sudo().create({'name': sf_state,
-                                                                 'code': sf_state,
-                                                                 'country_id': partner_dict.get('country_id')})
+            elif not state_id and partner_dict.get('country_id'):
+                account_sf_state_dict = {'name': sf_state, 'code': sf_state, 'country_id': partner_dict.get('country_id')}
+                state_id = self.env['res.country.state'].sudo().create(account_sf_state_dict)
                 partner_dict['state_id'] = state_id.id
         if sf_account_info.get('BillingPostalCode'):
             partner_dict['zip'] = sf_account_info.get('BillingPostalCode')

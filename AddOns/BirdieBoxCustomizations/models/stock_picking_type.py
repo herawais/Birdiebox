@@ -13,3 +13,8 @@ class CustomStockPickingType(models.Model):
         string='Require All Orders to Be Complete Before Validating',
         default=False
     )
+
+    x_print_shipping_label = fields.Boolean(
+        string='Auto Print Shipping Label',
+        default=False
+    )

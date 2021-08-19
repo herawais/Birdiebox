@@ -16,12 +16,14 @@
     'Uncategorized',
     'version':
     '1.0',
-    'depends': ['repair'],
+    'depends': ['repair', 'base', 'sale', 'delivery'],
     'data': [
         'security/ir.model.access.csv', 'views/bulk_sale.xml',
         'wizards/bulk_sale_create_wizard.xml',
         'views/report_stock_forecasted.xml',
-        'views/stock_picking_type_form.xml'
+        'views/stock_picking_type_form.xml',
+        'views/printers.xml',
+        'views/res_users_menu.xml'
     ],
     'application':
     True,

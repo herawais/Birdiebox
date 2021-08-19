@@ -465,24 +465,35 @@ class ResCompany(models.Model):
             if res_partner_srch.x_last_modified_on:
                 if sf_modified_dt > res_partner_srch.x_last_modified_on:
                     contact_dict = self.create_odoo_sf_contact_dictionary(sf_cust_det)
-                    parent_record_written = res_partner_srch.sudo().write(contact_dict)
-                    if parent_record_written:
-                        res_partner_srch._cr.commit()
+                    if contact_dict.get('parent_id'):
+                        parent_record_written = res_partner_srch.sudo().write(contact_dict)
+                        if parent_record_written:
+                            _logger.info("Write into Existing Odoo Contact-----------  %s: ", str(res_partner_srch.id))
+
+                            res_partner_srch._cr.commit()
+                        return True
                     return True
                 else:
                     return True
             else:
                 contact_dict = self.create_odoo_sf_contact_dictionary(sf_cust_det)
-                parent_record_written = res_partner_srch.sudo().write(contact_dict)
-                if parent_record_written:
-                    res_partner_srch._cr.commit()
+                if contact_dict.get('parent_id'):
+                    parent_record_written = res_partner_srch.sudo().write(contact_dict)
+                    if parent_record_written:
+                        _logger.info("Write into Existing Odoo Contact-----------  %s: ", str(res_partner_srch.id))
+                        res_partner_srch._cr.commit()
+                    return True
                 return True
         else:
             contact_dict = self.create_odoo_sf_contact_dictionary(sf_cust_det)
-            partner_create_id = self.env['res.partner'].sudo().create(contact_dict)
-            if partner_create_id:
-                partner_create_id._cr.commit()
-            return True
+            if contact_dict.get('parent_id'):
+                partner_create_id = self.env['res.partner'].sudo().create(contact_dict)
+                if partner_create_id:
+                    _logger.info("Created New Contact Into Odoo-----------  %s: ", str(partner_create_id.id))
+
+                    partner_create_id._cr.commit()
+                return True
+            return False
         return False
 
     # @api.multi
@@ -498,6 +509,7 @@ class ResCompany(models.Model):
                 contact_parsed_data = json.loads(str(contact_data.text))
                 _logger.info("Total Contacts in salesforce to import : %s ", (str(contact_parsed_data.get('totalSize'))))
                 for contact in contact_parsed_data.get('records'):
+
                     try:
                         result = self.create_sf_contact(contact)
                         if result:
@@ -1229,7 +1241,6 @@ class ResCompany(models.Model):
             partner_data = requests.request('GET', self.sf_url + '/services/data/v40.0/sobjects/account/' + str(id_to_search), headers=headers)
         else:
             partner_data = requests.request('GET', self.sf_url + '/services/data/v40.0/sobjects/contact/' + str(id_to_search), headers=headers)
-
         if partner_data.status_code == 200:
             if partner_data.text:
                 partner_parsed_json = json.loads(str(partner_data.text))
@@ -1412,7 +1423,9 @@ class ResCompany(models.Model):
                 acc_parsed_data = json.loads(str(company_data.text))
                 _logger.info("Total Accounts in salesforce to import : %s ", (str(acc_parsed_data.get('totalSize'))))
                 _logger.info("Actual Total Accounts in salesforce response : %s ", (len(acc_parsed_data.get('records'))))
+
                 for i, account in enumerate(acc_parsed_data.get('records')):
+
                     if account.get('Type') == 'Key_Client' or account.get('Type') == 'Client':
                         _logger.info("current record: %s ", i)
                         try:

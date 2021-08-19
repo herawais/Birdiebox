@@ -23,7 +23,7 @@ class CustomStockPicking(models.Model):
         picking = super(CustomStockPicking, self).button_validate()
 
         if self.picking_type_id.x_print_shipping_label and self.carrier_id:
-            self.print_shipping_label()
+            picking.print_shipping_label()
 
         return picking
 

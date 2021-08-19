@@ -87,7 +87,7 @@ class BohmPrinterSettings(models.Model):
                 }
             )
 
-            if not response.status_code != 200:
+            if response.status_code != 200:
                 raise ValidationError('Could not connect to print server.')
 
             current_printers = self.env["res.printers"].search([

@@ -17,15 +17,15 @@ class CustomStockPicking(models.Model):
     _inherit = 'stock.picking'
 
     def button_validate(self):
+        res = super(CustomStockPicking, self).button_validate()
+
         if self.picking_type_id.x_require_pickings_complete:
             self.validate_kitting()
 
-        picking = super(CustomStockPicking, self).button_validate()
-
         if self.picking_type_id.x_print_shipping_label and self.carrier_id:
-            picking.print_shipping_label()
+            self.print_shipping_label()
 
-        return picking
+        return res
 
     def write(self, vals):
         if 'date_done' in vals and self.picking_type_id.id == 2:
@@ -75,9 +75,6 @@ class CustomStockPicking(models.Model):
 
         shipping_labels = self._get_shipping_label()
 
-        if not len(shipping_labels):
-            raise ValidationError('No Label Found to Print.')
-
         payload = {"shipping_labels": shipping_labels, "printer": printer}
 
         exp = (datetime.datetime.now() + datetime.timedelta(minutes=15))
@@ -124,6 +121,7 @@ class CustomStockPicking(models.Model):
                             attachment_id.datas.decode("utf-8") or ""
                         })
                     except Exception as e:
-                        raise ValidationError('Unable To Generate Label \n- %s', e)
+                        raise ValidationError(
+                            'Unable To Generate Label \n- %s', e)
 
         return attachments

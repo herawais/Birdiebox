@@ -465,18 +465,35 @@ class ResCompany(models.Model):
             if res_partner_srch.x_last_modified_on:
                 if sf_modified_dt > res_partner_srch.x_last_modified_on:
                     contact_dict = self.create_odoo_sf_contact_dictionary(sf_cust_det)
-                    parent_record_written = res_partner_srch.sudo().write(contact_dict)
+                    if contact_dict.get('parent_id'):
+                        parent_record_written = res_partner_srch.sudo().write(contact_dict)
+                        if parent_record_written:
+                            _logger.info("Write into Existing Odoo Contact-----------  %s: ", str(res_partner_srch.id))
+
+                            res_partner_srch._cr.commit()
+                        return True
                     return True
                 else:
                     return True
             else:
                 contact_dict = self.create_odoo_sf_contact_dictionary(sf_cust_det)
-                parent_record_written = res_partner_srch.sudo().write(contact_dict)
+                if contact_dict.get('parent_id'):
+                    parent_record_written = res_partner_srch.sudo().write(contact_dict)
+                    if parent_record_written:
+                        _logger.info("Write into Existing Odoo Contact-----------  %s: ", str(res_partner_srch.id))
+                        res_partner_srch._cr.commit()
+                    return True
                 return True
         else:
             contact_dict = self.create_odoo_sf_contact_dictionary(sf_cust_det)
-            partner_create_id = self.env['res.partner'].sudo().create(contact_dict)
-            return True
+            if contact_dict.get('parent_id'):
+                partner_create_id = self.env['res.partner'].sudo().create(contact_dict)
+                if partner_create_id:
+                    _logger.info("Created New Contact Into Odoo-----------  %s: ", str(partner_create_id.id))
+
+                    partner_create_id._cr.commit()
+                return True
+            return False
         return False
 
     # @api.multi
@@ -492,6 +509,7 @@ class ResCompany(models.Model):
                 contact_parsed_data = json.loads(str(contact_data.text))
                 _logger.info("Total Contacts in salesforce to import : %s ", (str(contact_parsed_data.get('totalSize'))))
                 for contact in contact_parsed_data.get('records'):
+
                     try:
                         result = self.create_sf_contact(contact)
                         if result:
@@ -1223,7 +1241,6 @@ class ResCompany(models.Model):
             partner_data = requests.request('GET', self.sf_url + '/services/data/v40.0/sobjects/account/' + str(id_to_search), headers=headers)
         else:
             partner_data = requests.request('GET', self.sf_url + '/services/data/v40.0/sobjects/contact/' + str(id_to_search), headers=headers)
-
         if partner_data.status_code == 200:
             if partner_data.text:
                 partner_parsed_json = json.loads(str(partner_data.text))
@@ -1257,11 +1274,13 @@ class ResCompany(models.Model):
                 partner_dict['parent_id'] = res_partner_srch.id
             else:
                 sf_account_data = self.get_sf_customer_required_details(sf_contact_info.get('AccountId'), is_account=True)
-                company_dict = self.create_odoo_sf_company_dictionary(sf_account_data)
-                company_dict.update({'is_company': True})
-                company_rec_id = self.env['res.partner'].sudo().create(company_dict)
-                company_rec_id._cr.commit()
-                partner_dict['parent_id'] = company_rec_id.id
+                if 'Type' in sf_account_data:
+                    if sf_account_data.get('Type') == 'Key_Client' or sf_account_data.get('Type') == 'Client':
+                        company_dict = self.create_odoo_sf_company_dictionary(sf_account_data)
+                        company_dict.update({'is_company': True})
+                        company_rec_id = self.env['res.partner'].sudo().create(company_dict)
+                        company_rec_id._cr.commit()
+                        partner_dict['parent_id'] = company_rec_id.id
 
         if sf_contact_info.get('Id'):
             partner_dict['x_salesforce_id'] = sf_contact_info.get('Id')
@@ -1285,13 +1304,12 @@ class ResCompany(models.Model):
                 partner_dict['country_id'] = country_id.id
         if sf_contact_info.get('MailingState', False):
             sf_state = sf_contact_info.get('MailingState')
-            state_id = self.env['res.country.state'].search([('name', '=', sf_state)], limit=1)
+            state_id = self.env['res.country.state'].search([('code', '=', sf_state)], limit=1)
             if state_id:
                 partner_dict['state_id'] = state_id.id
-            elif sf_state and partner_dict.get('country_id', False):
-                state_id = self.env['res.country.state'].sudo().create({'name': sf_state,
-                                                                 'code': sf_state,
-                                                                 'country_id': partner_dict.get('country_id'),})
+            elif sf_state and not state_id and partner_dict.get('country_id'):
+                res_country_state_dict = {'name': sf_state, 'code': sf_state, 'country_id': partner_dict.get('country_id')}
+                state_id = self.env['res.country.state'].sudo().create(res_country_state_dict)
                 partner_dict['state_id'] = state_id.id
         if sf_contact_info.get('MailingPostalCode', False):
             partner_dict['zip'] = sf_contact_info.get('MailingPostalCode')
@@ -1329,13 +1347,12 @@ class ResCompany(models.Model):
                 partner_dict['country_id'] = country_id.id
         sf_state = sf_account_info.get('BillingAddress') and sf_account_info.get('BillingAddress').get('state')
         if sf_state:
-            state_id = self.env['res.country.state'].search([('name', '=', sf_state)], limit=1)
+            state_id = self.env['res.country.state'].search([('code', '=', sf_state)], limit=1)
             if state_id:
                 partner_dict['state_id'] = state_id.id
-            elif partner_dict.get('country_id', False):
-                state_id = self.env['res.country.state'].sudo().create({'name': sf_state,
-                                                                 'code': sf_state,
-                                                                 'country_id': partner_dict.get('country_id')})
+            elif not state_id and partner_dict.get('country_id'):
+                account_sf_state_dict = {'name': sf_state, 'code': sf_state, 'country_id': partner_dict.get('country_id')}
+                state_id = self.env['res.country.state'].sudo().create(account_sf_state_dict)
                 partner_dict['state_id'] = state_id.id
         if sf_account_info.get('BillingPostalCode'):
             partner_dict['zip'] = sf_account_info.get('BillingPostalCode')
@@ -1367,19 +1384,26 @@ class ResCompany(models.Model):
                 if sf_modified_dt > res_partner_srch.x_last_modified_on:
                     company_dict = self.create_odoo_sf_company_dictionary(sf_account_data)
                     parent_record_written = res_partner_srch.sudo().write(company_dict)
+                    if parent_record_written:
+                        _logger.info("Write into Existing Odoo Account----------- %s: ", str(res_partner_srch.id))
+
                     return True
                 else:
                     return True
             else:
                 company_dict = self.create_odoo_sf_company_dictionary(sf_account_data)
                 parent_record_written = res_partner_srch.sudo().write(company_dict)
+                if parent_record_written:
+                    _logger.info("Write into Existing Odoo Account----------- %s: ", str(res_partner_srch.id))
                 return True
 
         else:
             company_dict = self.create_odoo_sf_company_dictionary(sf_account_data)
             company_dict.update({'is_company': True})
             company_rec_id = self.env['res.partner'].sudo().create(company_dict)
-            company_rec_id._cr.commit()
+            if company_rec_id:
+                _logger.info("Created New Account into odoo----------- %s: ", str(company_rec_id.id))
+                company_rec_id._cr.commit()
             return True
         return False
 
@@ -1393,22 +1417,25 @@ class ResCompany(models.Model):
             temp_odoo_date = self.account_lastmodifieddate
             sf_modified_date = self.convert_odoodt_tosf(str(temp_odoo_date))
             company_data = requests.request('GET',
-                                            self.sf_url + '''/services/data/v40.0/query/?q=select Id, LastModifiedDate from account where LastModifiedDate > {} ORDER BY LastModifiedDate'''.format(
+                                            self.sf_url + '''/services/data/v40.0/query/?q=select Id,Type,LastModifiedDate from account where LastModifiedDate > {} ORDER BY LastModifiedDate'''.format(
                                                 sf_modified_date), headers=headers)
             if company_data.status_code == 200:
                 acc_parsed_data = json.loads(str(company_data.text))
                 _logger.info("Total Accounts in salesforce to import : %s ", (str(acc_parsed_data.get('totalSize'))))
                 _logger.info("Actual Total Accounts in salesforce response : %s ", (len(acc_parsed_data.get('records'))))
+
                 for i, account in enumerate(acc_parsed_data.get('records')):
-                    _logger.info("current record: %s ", i)
-                    try:
-                        result = self.create_sf_company(account)
-                        if result:
-                            _logger.info("Account ID %s", account.get('Id'))
-                            self.account_lastmodifieddate = self.convert_sfdate_toodoo(account.get('LastModifiedDate'))
-                            # self._cr.commit()
-                    except Exception as e:
-                        _logger.error('Oops Some error in  creating/updating record from SALESFORCE ACCOUNT %s', e)
+
+                    if account.get('Type') == 'Key_Client' or account.get('Type') == 'Client':
+                        _logger.info("current record: %s ", i)
+                        try:
+                            result = self.create_sf_company(account)
+                            if result:
+                                _logger.info("Account ID %s", account.get('Id'))
+                                self.account_lastmodifieddate = self.convert_sfdate_toodoo(account.get('LastModifiedDate'))
+                                # self._cr.commit()
+                        except Exception as e:
+                            _logger.error('Oops Some error in  creating/updating record from SALESFORCE ACCOUNT %s', e)
             elif company_data.status_code == 401:
                 _logger.warning("Invalid Session")
                 self.refresh_salesforce_token_from_access_token()

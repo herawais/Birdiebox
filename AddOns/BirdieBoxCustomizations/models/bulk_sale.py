@@ -215,6 +215,7 @@ class BulkSale(models.Model):
                 "x_studio_shipping_type": so.x_studio_shipping_type,
                 "x_studio_text_field_JLki5": so.x_studio_text_field_JLki5,
                 "x_studio_type_of_order": so.x_studio_type_of_order,
+                "x_studio_in_hand_date_flexibility": so.x_studio_in_hand_date_flexibility,
                 "order_line": order_lines
             }
 

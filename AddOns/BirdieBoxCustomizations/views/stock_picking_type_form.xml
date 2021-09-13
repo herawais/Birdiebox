@@ -11,6 +11,7 @@
               <div class="o_horizontal_separator">Custom Validations</div>
               <field name="x_require_pickings_complete"/>
               <field name="x_print_shipping_label"/>
+              <field name="x_validate_carrier"/>
             </group>
           </group>
         </xpath>

@@ -15,7 +15,16 @@ class CustomSaleOrder(models.Model):
         if self.x_studio_shipping_type in ['Individual', 'Bulk Freight and Individual', 'Bulk Ground and Individual'] and not self.x_studio_related_sales_order:
            self.state = 'sale'
         else:
-            return super(CustomSaleOrder, self).action_confirm()
+            res = super(CustomSaleOrder, self).action_confirm()
+            
+            try:
+                for picking in self.picking_ids.filtered(lambda x: x.picking_type_id.id == 12):
+                    if self.carrier_id and self.carrier_id.id != 4:
+                        picking.carrier_id = self.carrier_id
+            except:
+                pass
+            
+            return res
 
 
 class CustomSaleOrderLine(models.Model):

@@ -26,10 +26,7 @@ class CustomStockPicking(models.Model):
             self.print_shipping_label()
 
         if self.picking_type_id.x_validate_carrier:
-            if self.carrier_id != self.sale_id.carrier_id:
-                raise ValidationError(
-                    'Please confirm that the shipping carrier matches the sale order.'
-                )
+            self.validate_carrier()
 
         return res
 
@@ -52,6 +49,17 @@ class CustomStockPicking(models.Model):
                 raise ValidationError(
                     'You cannot complete kitting until the following operations have been completed: \n'
                     + incomplete)
+
+    
+    def validate_carrier(self):
+        try:
+            if self.sale_id.carrier_id:
+                if self.carrier_id != self.sale_id.carrier_id and self.sale_id.carrier_id.id != 4:
+                        raise ValidationError(
+                            'Please confirm that the shipping carrier matches the sale order.'
+                        )
+        except:
+            pass
 
     def update_delivered_qty(self):
         parent_sale_order = self.sale_id.x_studio_related_sales_order

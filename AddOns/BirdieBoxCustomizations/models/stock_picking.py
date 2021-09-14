@@ -25,6 +25,12 @@ class CustomStockPicking(models.Model):
         if self.picking_type_id.x_print_shipping_label and self.carrier_id:
             self.print_shipping_label()
 
+        if self.picking_type_id.x_validate_carrier:
+            if self.carrier_id != self.sale_id.carrier_id:
+                raise ValidationError(
+                    'Please confirm that the shipping carrier matches the sale order.'
+                )
+
         return res
 
     def write(self, vals):

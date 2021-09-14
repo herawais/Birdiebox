@@ -18,3 +18,8 @@ class CustomStockPickingType(models.Model):
         string='Auto Print Shipping Label',
         default=False
     )
+
+    x_validate_carrier = fields.Boolean(
+        string='Validate Carrier Matches Sale Order',
+        default=False
+    )

@@ -52,14 +52,12 @@ class CustomStockPicking(models.Model):
 
     
     def validate_carrier(self):
-        try:
-            if self.sale_id.carrier_id:
-                if self.carrier_id != self.sale_id.carrier_id and self.sale_id.carrier_id.id != 4:
-                        raise ValidationError(
-                            'Please confirm that the shipping carrier matches the sale order.'
-                        )
-        except:
-            pass
+        if self.sale_id.carrier_id:
+            if self.carrier_id != self.sale_id.carrier_id and self.sale_id.carrier_id.id != 4:
+                    raise ValidationError(
+                        'Please confirm that the shipping carrier matches the sale order.'
+                    )
+
 
     def update_delivered_qty(self):
         parent_sale_order = self.sale_id.x_studio_related_sales_order

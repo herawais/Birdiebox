@@ -28,6 +28,7 @@ class CustomSaleOrder(models.Model):
     def shopify_order(self,args):
         COUNTRY = self.env['res.country']
         STATE = self.env['res.country.state']
+        PRODUCT = self.env['product.product']
         payloads = []
         orders = args.get('orders')
         for order in orders:
@@ -53,20 +54,50 @@ class CustomSaleOrder(models.Model):
             }
 
             for product in product_details:
-                
                 sku = product.get('sku')
                 qty = product.get('quantity')
                 customizations = product.get('properties')
+                product_id = PRODUCT.search([('default_code', '=', sku)], limit=1)
                 
-                order_payload = {
-                    
-                }
+                order_lines.append((0, 0, {
+                    "product_id": product_id.id,
+                    "name": product_id.name,
+                    "x_studio_customization_detail": "",
+                    "x_studio_customization_notes": "",
+                    "price_unit": 0,
+                    "tax_id": None,
+                    "product_uom_qty": qty
+                }))
+
+                
+                
+            order_payload = {
+                "company_id": 1,
+                "warehouse_id": 1,
+                "pricelist_id": 1,
+                "picking_policy": 'one',
+                # "partner_invoice_id": so.partner_id.id,
+                # "partner_shipping_id": partner.id,
+                # "partner_id": partner.id,
+                # "date_order": so.date_order,
+                # "team_id": so.team_id.id,
+                # "carrier_id": so.carrier_id.id,
+                # "commitment_date": so.commitment_date,
+                # "x_studio_google_drive_link": so.x_studio_google_drive_link,
+                # "x_studio_kitting": so.x_studio_kitting,
+                # "x_studio_letter_content_1": so.x_studio_letter_content_1,
+                # "x_studio_related_sales_order": so.id,
+                # "x_studio_shipping_type": so.x_studio_shipping_type,
+                # "x_studio_text_field_JLki5": so.x_studio_text_field_JLki5,
+                # "x_studio_type_of_order": so.x_studio_type_of_order,
+                # "x_studio_in_hand_date_flexibility": so.x_studio_in_hand_date_flexibility,
+                "order_line": order_lines
+            }
 
 
                 
 
-
-            _logger.debug('\n\n\n %s', partner_payload)
+            _logger.debug('\n\n\n %s', order_payload)
 
 class CustomSaleOrderLine(models.Model):
     _inherit = 'sale.order.line'

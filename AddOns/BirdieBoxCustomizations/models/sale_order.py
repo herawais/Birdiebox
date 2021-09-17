@@ -26,9 +26,40 @@ class CustomSaleOrder(models.Model):
             
             return res
 
+    @api.model
+    def create(self, vals):
+        res = super(CustomSaleOrder, self).create(vals)
+        if res.x_studio_related_sales_order:
+            for line in res.x_studio_related_sales_order.order_line:
+                already_exists = False
+                if line.x_auto_add_to_child:
+                    sale_order_line = {
+                        "sequence": 0,
+                        "product_id": line.product_id.id,
+                        "order_id": res.id,
+                        "name": line.name,
+                        "x_studio_customization_detail": line.x_studio_customization_detail,
+                        "x_studio_customization_notes": line.x_studio_customization_notes,
+                        "route_id": line.route_id.id,
+                        "price_unit": line.price_unit,
+                        'tax_id':line.tax_id.id,
+                    }
+                    for created_line in res.order_line:
+                        if created_line.product_id.id == line.product_id.id:
+                            already_exists = True
+                    
+                    if not already_exists:
+                        self.env['sale.order.line'].create(sale_order_line)
+        return res
 
 class CustomSaleOrderLine(models.Model):
     _inherit = 'sale.order.line'
+
+    x_auto_add_to_child = fields.Boolean(
+        string='Auto-Add',
+        default=False,
+        help="If this is selected all related orders will automatically get this product added when created."
+    )
 
     def _action_launch_stock_rule(self, previous_product_uom_qty=False):
         try:

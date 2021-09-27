@@ -32,6 +32,9 @@ class CustomStockPicking(models.Model):
                     'Please confirm that the shipping carrier matches the sale order.'
                 )
 
+        if self.carrier_tracking_ref and self.sale_id.x_shopify_id and self.sale_id.x_studio_related_sales_order:
+            self.fulfill_shopify(tracking=self.carrier_tracking_ref)
+        
         return res
 
     def write(self, vals):

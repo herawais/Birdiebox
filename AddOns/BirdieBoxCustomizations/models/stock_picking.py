@@ -8,6 +8,7 @@ import json
 
 from odoo import _, api, fields, models
 from odoo.exceptions import ValidationError
+from ..controllers import shopify
 
 _logger = logging.getLogger(__name__)
 
@@ -36,6 +37,8 @@ class CustomStockPicking(models.Model):
     def write(self, vals):
         if 'date_done' in vals and self.picking_type_id.id == 2:
             self.update_delivered_qty()
+        if 'carrier_tracking_ref' in vals and self.sale_id.x_shopify_id and self.sale_id.x_studio_related_sales_order:
+            self.fulfill_shopify(tracking=vals.get('carrier_tracking_ref'))
 
         return super(CustomStockPicking, self).write(vals)
 
@@ -131,3 +134,29 @@ class CustomStockPicking(models.Model):
                             'Unable To Generate Label \n- %s', e)
 
         return attachments
+
+    def fulfill_shopify(self, tracking):
+        if self.state == 'done':
+            record = self.env['shopify.shop'].search([
+                ('parent_sales_order.id', '=',
+                self.sale_id.x_studio_related_sales_order.id)
+            ])
+            order_url = "https://" + str(
+                record.shop_id) + ".myshopify.com/admin/orders/" + str(
+                    self.sale_id.x_shopify_id)
+
+            try:
+                brest = shopify.BirdieBox_Shopify_REST(record=record)
+                brest.set_fulfillments_and_close(
+                    order_id=self.sale_id.x_shopify_id,
+                    tracking_numbers=[tracking],
+                    notify_customer=False)
+                
+                self.sale_id.message_post(body=_(
+                    'This order has been fulfilled and the tracking has been uploaded to shopify. View the order <a href="%s" target="_blank">here</a>.'
+                ) % (str(order_url)))
+            except:
+                self.sale_id.message_post(body=_(
+                    'There was an error fulfilling this order in shopify. Please manually update the tracking <a href="%s" target="_blank">here</a>.'
+                ) % (str(order_url)))
+                pass

@@ -8,3 +8,5 @@ from . import stock_picking_type
 from . import res_partner
 from . import res_users
 from . import res_printers
+from . import shopify_configuration
+from . import shopify_order_logs

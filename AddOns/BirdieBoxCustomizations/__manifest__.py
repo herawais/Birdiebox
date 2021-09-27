@@ -24,7 +24,8 @@
         'views/stock_picking_type_form.xml',
         'views/printers.xml',
         'views/res_users_menu.xml',
-        'views/shopify.xml'
+        'views/shopify.xml',
+        'views/sale_order.xml'
     ],
     'application':
     True,

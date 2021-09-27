@@ -215,6 +215,13 @@ class CustomSaleOrder(models.Model):
             }
         )
 
+    def confirm_shopify_orders(self):
+        orders = self.search([('x_shopify_id', '!=', False), ('state', 'not in', ['cancel', 'sale', 'done'])])
+
+        for order in orders:
+            order.action_confirm()
+            self.env.cr.commit()
+
 class CustomSaleOrderLine(models.Model):
     _inherit = 'sale.order.line'
 

@@ -87,7 +87,8 @@ class CustomSaleOrder(models.Model):
                 initial_customization = ""
                 logo_customization = ""
                 logo_name_customization = ""
-                logo_initials_customzation = ""
+                logo_initials_customization = ""
+                first_and_name_customization = ""
                 
                 try:
                     for customization in customizations:
@@ -99,7 +100,9 @@ class CustomSaleOrder(models.Model):
                         elif customization_key == 'logo and name':
                             logo_name_customization = customization.get('value')
                         elif customization_key == 'logo and initials':
-                            logo_initials_customzation = customization.get('value')
+                            logo_initials_customization = customization.get('value')
+                        elif customization_key == 'first letter and name':
+                            first_and_name_customization = customization.get('value')
                 except Exception as e:
                     raise Exception('There was an error with the customization details: \n' + str(e))
                 
@@ -123,8 +126,12 @@ class CustomSaleOrder(models.Model):
                             sku = sku.split('-LN')[0]
                         elif sku.endswith('-LI'):
                             customization_detail = "Logo and Initials"
-                            customization_notes  = logo_initials_customzation
+                            customization_notes  = logo_initials_customization
                             sku = sku.split('-LI')[0]
+                        elif sku.endswith('-M'):
+                            customization_detail = "First Letter and Name"
+                            customization_notes  = first_and_name_customization
+                            sku = sku.split('-M')[0]
                     except Exception as e:
                         raise Exception('There was an error with the customization details: \n' + str(e))
                         

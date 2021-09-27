@@ -76,7 +76,7 @@ class BirdieBox_Shopify_REST(http.Controller):
         for item in subs.keys():
             wh_sub = {}
             wh_sub['topic'] = item
-            wh_sub['address'] = odoo_base_path + subs[item]
+            wh_sub['address'] = odoo_base_path + '/' + subs[item]
             wh_sub['format'] = 'json'
             payload = {}
             payload['webhook'] = wh_sub

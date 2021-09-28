@@ -159,7 +159,7 @@ class CustomStockPicking(models.Model):
                 brest.set_fulfillments_and_close(
                     order_id=self.sale_id.x_shopify_id,
                     tracking_numbers=[tracking],
-                    notify_customer=False)
+                    notify_customer=True)
                 
                 self.sale_id.message_post(body=_(
                     'This order has been fulfilled and the tracking has been uploaded to shopify. View the order <a href="%s" target="_blank">here</a>.'

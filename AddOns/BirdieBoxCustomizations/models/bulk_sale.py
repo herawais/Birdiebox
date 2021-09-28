@@ -206,7 +206,6 @@ class BulkSale(models.Model):
                 "date_order": so.date_order,
                 "team_id": so.team_id.id,
                 "carrier_id": so.carrier_id.id,
-                "picking_policy": so.picking_policy,
                 "commitment_date": so.commitment_date,
                 "x_studio_google_drive_link": so.x_studio_google_drive_link,
                 "x_studio_kitting": so.x_studio_kitting,

@@ -21,12 +21,12 @@ class CustomSaleOrder(models.Model):
             res = super(CustomSaleOrder, self).action_confirm()
             
             try:
-                for picking in self.picking_ids.filtered(lambda x: x.picking_type_id.id == 12):
-                    if self.carrier_id and self.carrier_id.id != 4:
-                        picking.carrier_id = self.carrier_id
-            except:
-                pass
-            
+                for line in self.order_line:
+                    if not line.route_id:
+                        raise Exception('Please set the route for product: ' + str(line.product_id.default_code) + '.')
+            except Exception as e:
+                raise ValidationError(e)
+
             return res
 
     def create_shopify_order(self,order, shop_name):
@@ -68,7 +68,7 @@ class CustomSaleOrder(models.Model):
                 "zip": shipping_details.get('zip'),
                 "country_id": country_id.id,
                 "state_id": state_id.id,
-                "phone": shipping_details.get('phone'),
+                "phone": 14692942500,
                 "type": "delivery",
                 "property_account_receivable_id": 2,
                 "property_account_payable_id": 1,
@@ -154,6 +154,9 @@ class CustomSaleOrder(models.Model):
                     if len(product_id) > 1:
                         raise Exception('Found multiple matches for the SKU "' + sku + '" in Odoo.')
                     
+                    if not route:
+                        route = product_id.get_route()
+
                     order_lines.append((0, 0, {
                         "product_id": product_id.id,
                         "name": product_id.name,
@@ -161,8 +164,8 @@ class CustomSaleOrder(models.Model):
                         "x_studio_customization_notes": customization_notes,
                         "price_unit": 0,
                         "tax_id": None,
-                        "route_id": route,
-                        "product_uom_qty": qty
+                        "product_uom_qty": qty,
+                        "route_id": route
                     }))
             
             order_payload = {
@@ -244,7 +247,10 @@ class CustomSaleOrder(models.Model):
         orders = self.search([('x_shopify_id', '!=', False), ('state', 'not in', ['cancel', 'sale', 'done'])])
 
         for order in orders:
-            order.action_confirm()
+            try:
+                order.action_confirm()
+            except:
+                pass
             self.env.cr.commit()
     @api.model
     def create(self, vals):

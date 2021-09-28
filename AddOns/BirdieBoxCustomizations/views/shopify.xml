@@ -48,6 +48,7 @@
                 </div>
                 </group>
                 <group>
+                    <field string="Import Date" name="create_date" />
                     <field name="shop" />
                     <field name="error" readonly="1"/>
                 </group>
@@ -92,11 +93,13 @@
         <field name="model">shopify.log</field>
         <field name="arch" type="xml">
             <tree
+                default_order="create_date desc"
                 decoration-danger="success==False" 
                 decoration-success="success==True"
             >
                 <field name="shop" />
                 <field name="order_id" />
+                <field string="Import Date" name="create_date" />
                 <field name="error" />
                 <field name="success" invisible="1"/>
             </tree>

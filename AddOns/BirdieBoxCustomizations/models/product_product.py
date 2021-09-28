@@ -25,6 +25,15 @@ class CustomProductProduct(models.Model):
                 except:
                     pass
 
+    def get_route(self):
+        route = None
+        for route_id in self.route_ids.ids:
+            if route_id in [9, 11, 8, 10]:
+                route = route_id
+                break
+
+        return route
+    
     def add_reordering_rule(self):
         active_reordering = self.env['stock.warehouse.orderpoint'].search([
             ('active', '=', True), ('trigger', '=', 'auto')

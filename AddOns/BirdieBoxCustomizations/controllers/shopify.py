@@ -286,7 +286,7 @@ class BirdieBox_Shopify_WH(http.Controller):
         sh_shared_secret = http.request.env['shopify.shop'].sudo().search([('shop_id', 'ilike', shop_name)],limit=1).shared_secret
         # ============================================================================
         sh_validator = self.verify_webhook(sh_shared_secret, raw_shopify_data, hmac_header)
-        # # # Validate the request coming from BirdieBox
+        # Validate the request coming from BirdieBox
         if not sh_validator:
             resp = Response("Not Found", status=404)
             resp.headers['X-MP-Odoo-JSON'] = "TRUE"

@@ -90,21 +90,21 @@ class CustomSaleOrder(models.Model):
                 logo_initials_customization = ""
                 first_and_name_customization = ""
                 
-                # try:
-                #     for customization in customizations:
-                #         customization_key = str(customization.get('name')).lower()
-                #         if customization_key == 'initials':
-                #             initial_customization = customization.get('value')
-                #         elif customization_key == 'logo':
-                #             logo_customization = customization.get('value')
-                #         elif customization_key == 'logo and name':
-                #             logo_name_customization = customization.get('value')
-                #         elif customization_key == 'logo and initials':
-                #             logo_initials_customization = customization.get('value')
-                #         elif customization_key == 'first letter and name':
-                #             first_and_name_customization = customization.get('value')
-                # except Exception as e:
-                #     raise Exception('There was an error with the customization details: \n' + str(e))
+                try:
+                    for customization in customizations:
+                        customization_key = str(customization.get('name')).lower()
+                        if customization_key == 'initials':
+                            initial_customization = customization.get('value')
+                        elif customization_key == 'logo':
+                            logo_customization = customization.get('value')
+                        elif customization_key == 'logo and name':
+                            logo_name_customization = customization.get('value')
+                        elif customization_key == 'logo and initials':
+                            logo_initials_customization = customization.get('value')
+                        elif customization_key == 'first letter and name' or customization_key == 'first letter and last name':
+                            first_and_name_customization = customization.get('value')
+                except Exception as e:
+                    raise Exception('There was an error with the customization details: \n' + str(e))
                 
                 for sku in shopify_sku.split('|'):
                     customization_detail = None
@@ -114,31 +114,26 @@ class CustomSaleOrder(models.Model):
                     try:
                         if sku.endswith('-I'):
                             customization_detail = "Initial"
-                            # customization_notes = initial_customization
+                            customization_notes = initial_customization
                             sku = sku.split('-I')[0]
                         elif sku.endswith('-L'):
                             customization_detail = "Logo"
-                            # customization_notes = logo_customization
+                            customization_notes = logo_customization
                             sku = sku.split('-L')[0]
                         elif sku.endswith('-LN'):
                             customization_detail = "Logo and Name"
-                            # customization_notes  = logo_name_customization
+                            customization_notes  = logo_name_customization
                             sku = sku.split('-LN')[0]
                         elif sku.endswith('-LI'):
                             customization_detail = "Logo and Initials"
-                            # customization_notes  = logo_initials_customization
+                            customization_notes  = logo_initials_customization
                             sku = sku.split('-LI')[0]
                         elif sku.endswith('-M'):
                             customization_detail = "First Letter and Name"
-                            # customization_notes  = first_and_name_customization
+                            customization_notes  = first_and_name_customization
                             sku = sku.split('-M')[0]
-                        
-                        #new customization_detail
-                        try:
-                            if customization_detail:
-                                customization_notes = customizations[0].get('value')
-                        except:
-                            pass
+
+
                     except Exception as e:
                         raise Exception('There was an error with the customization details: \n' + str(e))
                         

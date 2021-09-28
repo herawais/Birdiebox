@@ -89,6 +89,7 @@ class CustomSaleOrder(models.Model):
                 logo_name_customization = ""
                 logo_initials_customization = ""
                 first_and_name_customization = ""
+                full_name_customization = ""
                 
                 try:
                     for customization in customizations:
@@ -101,8 +102,10 @@ class CustomSaleOrder(models.Model):
                             logo_name_customization = customization.get('value')
                         elif customization_key == 'logo and initials':
                             logo_initials_customization = customization.get('value')
-                        elif customization_key == 'first letter and name' or customization_key == 'first letter and last name':
+                        elif customization_key == 'first letter and name' or customization_key == 'first letter and last name' or customization_key == 'last name':
                             first_and_name_customization = customization.get('value')
+                        elif customization_key == 'name' or customization_key == 'full name':
+                            full_name_customization = customization.get('value')
                 except Exception as e:
                     raise Exception('There was an error with the customization details: \n' + str(e))
                 
@@ -132,6 +135,10 @@ class CustomSaleOrder(models.Model):
                             customization_detail = "First Letter and Name"
                             customization_notes  = first_and_name_customization
                             sku = sku.split('-M')[0]
+                        elif sku.endswith('-N'):
+                            customization_detail = "Full Name"
+                            customization_notes = full_name_customization
+                            sku = sku.split('-N')[0]
 
 
                     except Exception as e:

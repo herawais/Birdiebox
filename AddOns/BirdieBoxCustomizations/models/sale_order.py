@@ -81,7 +81,7 @@ class CustomSaleOrder(models.Model):
                 raise Exception('There was an error creating the partner for this order in Odoo.\n ' + str(e))
 
             for product in product_details:
-                shopify_sku = str(product.get('sku'))
+                shopify_sku = str(product.get('sku')).strip()
                 qty = product.get('quantity')
                 customizations = product.get('properties')
                 initial_customization = ""
@@ -93,7 +93,7 @@ class CustomSaleOrder(models.Model):
                 
                 try:
                     for customization in customizations:
-                        customization_key = str(customization.get('name')).lower()
+                        customization_key = str(customization.get('name')).lower().strip()
                         if customization_key == 'initials':
                             initial_customization = customization.get('value')
                         elif customization_key == 'logo':

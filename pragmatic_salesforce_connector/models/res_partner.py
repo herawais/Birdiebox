@@ -345,7 +345,7 @@ class ResPartnerCustomization(models.Model):
                 self.x_salesforce_exported = True
                 self.x_last_modified_on = datetime.now()
                 self.x_salesforce_id = parsed_result.get('id')
-                # self.commit()
+                self._cr.commit()
                 _logger.info("Updated companies in salesforce")
                 return parsed_result.get('id')
             else:
@@ -492,3 +492,25 @@ class ResPartnerCustomization(models.Model):
                     partner.update_partner_in_sf(sf_company_dict)
                 else:
                     partner.create_partner_in_sf(sf_company_dict)
+
+
+    def exportCustomOrderPartner_to_sf(self):
+        active_ids = self.env.context.get('active_ids')
+        sf_config = self.env.user.company_id
+        if not active_ids:
+            raise UserError(_("No ids selected"))
+        account_id = False
+        for partner in self:
+            if partner.is_company:
+                sf_company_dict = partner.create_company_sf_dict()
+                if partner.x_salesforce_id:
+                    partner.update_partner_in_sf(sf_company_dict)
+                else:
+                    partner.create_partner_in_sf(sf_company_dict)
+            elif not partner.is_company:
+                sf_company_dict = partner.create_contact_sf_dict()
+                if partner.x_salesforce_id:
+                    partner.update_partner_in_sf(sf_company_dict)
+                else:
+                    partner.create_partner_in_sf(sf_company_dict)
+            return partner

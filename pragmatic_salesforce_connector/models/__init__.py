@@ -9,3 +9,4 @@ from . import contract
 from . import event
 from . import mail_activity
 from . import quote
+from . import sf_logging

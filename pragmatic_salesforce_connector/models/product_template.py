@@ -3,14 +3,16 @@ import requests
 from odoo import fields, api, models, _
 from odoo.exceptions import UserError
 import logging
+
 _logger = logging.getLogger(__name__)
+
 
 class ProductTemplateCust(models.Model):
     _inherit = 'product.template'
 
-    x_salesforce_exported = fields.Boolean('Exported To Salesforce', default=False,copy=False)
-    x_salesforce_id = fields.Char('Salesforce Id',copy=False)
-    x_is_updated = fields.Boolean('x_is_updated', default=False,copy=False)
+    x_salesforce_exported = fields.Boolean('Exported To Salesforce', default=False, copy=False)
+    x_salesforce_id = fields.Char('Salesforce Id', copy=False)
+    x_is_updated = fields.Boolean('x_is_updated', default=False, copy=False)
 
     def sendDataToSf(self, product_dict):
         #         sf_config = self.env['res.users'].search([('id','=',self._uid)],limit=1).company_id
@@ -35,7 +37,8 @@ class ProductTemplateCust(models.Model):
             payload = json.dumps(product_dict)
             if self.x_salesforce_id:
                 ''' Try Updating it if already exported '''
-                res = requests.request('PATCH', sf_config.sf_url + endpoint + '/' + self.x_salesforce_id, headers=headers, data=payload)
+                res = requests.request('PATCH', sf_config.sf_url + endpoint + '/' + self.x_salesforce_id,
+                                       headers=headers, data=payload)
                 if res.status_code == 204:
                     self.x_is_updated = True
                 else:
@@ -77,7 +80,7 @@ class ProductTemplateCust(models.Model):
             for product in prod_temp.product_variant_ids:
                 product.exportProduct_to_sf()
 
-    def send_product_temp_DataToSf(self,product_dict):
+    def send_product_temp_DataToSf(self, product_dict):
         _logger.info("send_product_temp_DataToSf")
 
         sf_config = self.env.user.company_id
@@ -95,12 +98,12 @@ class ProductTemplateCust(models.Model):
             headers['Authorization'] = 'Bearer ' + str(sf_access_token)
             headers['Content-Type'] = 'application/json'
             headers['Accept'] = 'application/json'
-            exsting_res =''
+            exsting_res = ''
             if 'SKU__c' in product_dict and not self.x_salesforce_id:
                 _logger.info("In if sku found")
 
                 exsiting_endpoint = "/services/data/v40.0/query/?q=select Id from product2 where sku__c = '{}'".format(
-                   product_dict['SKU__c'])
+                    product_dict['SKU__c'])
                 exsting_res = requests.request('GET', sf_config.sf_url + exsiting_endpoint, headers=headers)
                 exsting_res_dict = json.loads(exsting_res.text)
                 endpoint = '/services/data/v39.0/sobjects/product2'
@@ -178,8 +181,8 @@ class ProductTemplateCust(models.Model):
                 exsting_res = requests.request('GET', sf_config.sf_url + exsiting_endpoint, headers=headers)
                 exsting_res_dict = json.loads(exsting_res.text)
                 endpoint = '/services/data/v39.0/sobjects/product2'
-                _logger.info("==== exsiting name%s",exsting_res)
-                if exsting_res_dict['totalSize'] >=1:
+                _logger.info("==== exsiting name%s", exsting_res)
+                if exsting_res_dict['totalSize'] >= 1:
                     if exsting_res.status_code == 200:
                         parsed_resp = json.loads(str(exsting_res.text))
                         if parsed_resp.get('records') and parsed_resp.get('records')[0].get('Id'):
@@ -223,7 +226,6 @@ class ProductTemplateCust(models.Model):
                 if res.status_code == 204:
                     _logger.info("Updated product sucessfully")
 
-
     def exportProduct_Template_to_sf(self):
         if len(self) > 1:
             raise UserError(_("Please Select 1 record to Export"))
@@ -250,9 +252,12 @@ class ProductTemplateCust(models.Model):
         if self.x_studio_branding_fee:
             product_dict['Branding_Fees__c'] = self.x_studio_branding_fee
 
-        if self.qty_available:
-            product_dict['Quantity_In_Warehouse__c'] = self.qty_available
-
+        # if self.qty_available:
+        #     product_dict['Quantity_In_Warehouse__c'] = self.qty_available
+        sf_product_variant = self.env['product.product'].search(
+            [('name', '=', self.name), ('default_code', '=', self.default_code), ], limit=1)
+        if sf_product_variant:
+            product_dict['Quantity_In_Warehouse__c'] = sf_product_variant.free_qty
         if self.virtual_available:
             product_dict['Forecasted_Quantity__c'] = self.virtual_available
 
@@ -275,6 +280,7 @@ class ProductTemplateCust(models.Model):
         if self.x_studio_customization_available:
             product_dict['Customization_Available__c'] = self.x_studio_customization_available
         _logger.info("exportProduct_Template_to_sf ===== product dict1111111111111 === %s", product_dict)
+
         result = self.send_product_temp_DataToSf(product_dict)
         if result:
             self.x_salesforce_exported = True

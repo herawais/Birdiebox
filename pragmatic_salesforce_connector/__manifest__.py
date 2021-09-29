@@ -1,10 +1,10 @@
 {
     'name': 'Odoo SalesForce Connector',
     'author': 'Pragmatic TechSoft Pvt Ltd.',
-    'version': '14.0.21',
+    'version': '14.0.23',
     'website': 'http://www.pragtech.co.in',
     'summary': '2 way SalesForce connector Odoo SalesForce Connector odoo salesforce integration crm app',
-    'depends': ['sale_management', 'product','crm'],
+    'depends': ['sale_management', 'product', 'crm'],
     'description': '''
 2-way SalesForce Connector for Odoo
 ===================================
@@ -29,6 +29,7 @@ crm app
         'views/event_view.xml',
         'views/mail_activity_view.xml',
         'views/sale_order_view.xml',
+        'views/sf_logging_views.xml'
     ],
     'images': ['static/description/animated-salesforce-connector.gif'],
     'live_test_url': 'http://www.pragtech.co.in/company/proposal-form.html?id=103&name=Odoo-Salesforce-Connector',

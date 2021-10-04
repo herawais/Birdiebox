@@ -26,13 +26,12 @@ class CustomProductProduct(models.Model):
                     pass
 
     def get_route(self):
-        route = None
+        routes = []
         for route_id in self.route_ids.ids:
-            if route_id in [9, 11, 8, 10]:
-                route = route_id
-                break
+            if route_id in [8, 9, 10, 11]:
+                routes.append(route_id)
 
-        return route
+        return routes
     
     def add_reordering_rule(self):
         active_reordering = self.env['stock.warehouse.orderpoint'].search([

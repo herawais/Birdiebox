@@ -155,7 +155,11 @@ class CustomSaleOrder(models.Model):
                         raise Exception('Found multiple matches for the SKU "' + sku + '" in Odoo.')
                     
                     if not route:
-                        route = product_id.get_route()
+                        found_routes = product_id.get_route()
+                        if len(found_routes) == 1:
+                            route = found_routes[0]
+                        else:
+                            route = None
 
                     order_lines.append((0, 0, {
                         "product_id": product_id.id,

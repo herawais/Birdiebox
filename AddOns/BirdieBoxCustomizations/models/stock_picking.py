@@ -18,21 +18,22 @@ class CustomStockPicking(models.Model):
     _inherit = 'stock.picking'
 
     def button_validate(self):
-        res = super(CustomStockPicking, self).button_validate()
+        for record in self:
+            res = super(CustomStockPicking, record).button_validate()
 
-        if self.picking_type_id.x_require_pickings_complete:
-            self.validate_kitting()
+            if record.picking_type_id.x_require_pickings_complete:
+                record.validate_kitting()
 
-        if self.picking_type_id.x_print_shipping_label and self.carrier_id:
-            self.print_shipping_label()
+            if record.picking_type_id.x_print_shipping_label and record.carrier_id:
+                record.print_shipping_label()
 
-        if self.picking_type_id.x_validate_carrier:
-            self.validate_carrier()
+            if record.picking_type_id.x_validate_carrier:
+                record.validate_carrier()
 
-        if self.carrier_tracking_ref and self.sale_id.x_shopify_id and self.sale_id.x_studio_related_sales_order:
-            self.fulfill_shopify(tracking=self.carrier_tracking_ref)
-        
-        return res
+            if record.carrier_tracking_ref and record.sale_id.x_shopify_id and record.sale_id.x_studio_related_sales_order:
+                record.fulfill_shopify(tracking=record.carrier_tracking_ref)
+            
+            return res
 
     def write(self, vals):
         if 'date_done' in vals and self.picking_type_id.id == 2:

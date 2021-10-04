@@ -22,7 +22,7 @@ class CustomSaleOrder(models.Model):
             
             try:
                 for line in self.order_line:
-                    if not line.route_id:
+                    if not line.route_id and line.product_id.type == 'product':
                         raise Exception('Please set the route for product: ' + str(line.product_id.default_code) + '.')
             except Exception as e:
                 raise ValidationError(e)

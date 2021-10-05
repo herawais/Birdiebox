@@ -71,11 +71,18 @@ class BulkSaleCreateLine(models.Model):
     x_studio_customization_notes = fields.Char('Customization Notes')
     price_unit = fields.Float('Unit Price', digits='Product Price')
     x_studio_customization_detail = fields.Selection(
-        [('Logo', 'Logo'), ('Initial', 'Initial'), ('Full Name', 'Full Name'),
+        [
+         ('Logo', 'Logo'), 
+         ('Initial', 'Initial'), 
+         ('Full Name', 'Full Name'),
          ('Logo and Name', 'Logo and Name'),
          ('First Letter and Name', 'First Letter and Name'),
-         ('Full Lid Print', 'Full Lid Print')],
-        string="Customization Detail")
+         ('Full Lid Print', 'Full Lid Print'),
+         ('Full Lid Print', 'Full Lid Print'),
+         ('Logo and Initials', 'Logo and Initials')
+        ],
+        string="Customization Detail"
+    )
 
     price_subtotal = fields.Float(string='Subtotal',
                                   compute='_compute_amount',

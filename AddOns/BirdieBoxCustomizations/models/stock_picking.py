@@ -9,6 +9,7 @@ import json
 from odoo import _, api, fields, models
 from odoo.exceptions import ValidationError
 from ..controllers import shopify
+from odoo.tools.misc import split_every
 
 _logger = logging.getLogger(__name__)
 
@@ -173,3 +174,11 @@ class CustomStockPicking(models.Model):
                     'There was an error fulfilling this order in shopify. Please manually update the tracking <a href="%s" target="_blank">here</a>.'
                 ) % (str(order_url)))
                 pass
+
+    def check_availability_cron(self):
+        domain = [('state', '=', 'confirmed')]
+        moves_to_assign = self.env['stock.picking'].search(domain, limit=None,
+            order='priority desc, date asc')
+        for moves_chunk in split_every(100, moves_to_assign.ids):
+            self.env['stock.picking'].browse(moves_chunk).sudo().action_assign()
+            self._cr.commit()

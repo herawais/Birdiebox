@@ -84,15 +84,15 @@ class SaleOrderCust(models.Model):
     def exportToSalesForce(self):
         if self.state in ['draft', 'sent']:
             self.exportQuotations_to_sf()
-        elif self.state in ['sale', 'done', 'cancle']:
+        elif self.state in ['sale', 'done', 'cancel']:
             self.exportSaleOrder_to_sf()
 
     @api.model
     def _scheduler_export_custom_orders_to_sf(self):
-        orders = self.sudo().search([('state', '=', 'sale')])
+        orders = self.sudo().search([])
         for order in orders:
             try:
-                if order.state in ['sale', 'done', 'cancel']:
+                if order.state in ['sale', 'done', 'cancel', 'draft', 'sent']:
                     order.exportCustomSaleOrder_to_sf()
             except Exception as e:
                 _logger.error('Oops Some error in  exporting custom orders to SALESFORCE %s', e)
@@ -115,6 +115,8 @@ class SaleOrderCust(models.Model):
             #     contract_export = self.contract_id.exportContract_to_sf()
             #     order_dict['Contract__c'] = self.contract_id.x_salesforce_id
 
+            if self.name:
+                order_dict['Odoo_Order_Number__c'] = self.name
             if self.x_studio_type_of_order:
                 order_dict['Type_of_Order__c'] = self.x_studio_type_of_order
             if self.commitment_date:

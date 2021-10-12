@@ -117,6 +117,10 @@ class SaleOrderCust(models.Model):
 
             if self.name:
                 order_dict['Odoo_Order_Number__c'] = self.name
+
+            if self.x_studio_sample_order_type:
+                order_dict['Sample_Order_Type__c'] = self.x_studio_sample_order_type
+
             if self.x_studio_type_of_order:
                 order_dict['Type_of_Order__c'] = self.x_studio_type_of_order
             if self.commitment_date:

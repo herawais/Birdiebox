@@ -107,8 +107,8 @@ class SaleOrderCust(models.Model):
         order_dict = {}
         if not self.x_studio_related_sales_order and self.partner_id.is_company and self.partner_id.x_salesforce_id:
             order_dict['Account__c'] = str(self.partner_id.x_salesforce_id)
-            if self.partner_shipping_id and self.partner_shipping_id.x_salesforce_id and not self.partner_shipping_id.is_company:
-                order_dict['Contact__c'] = str(self.partner_shipping_id.x_salesforce_id)
+            if self.partner_invoice_id and self.partner_invoice_id.x_salesforce_id and not self.partner_invoice_id.is_company:
+                order_dict['Contact__c'] = str(self.partner_invoice_id.x_salesforce_id)
             # if self.contract_id and self.contract_id.x_salesforce_id:
             #     order_dict['Contract__c'] = self.contract_id.x_salesforce_id
             # elif self.contract_id and not self.contract_id.x_salesforce_id:

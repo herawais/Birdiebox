@@ -1,3 +1,4 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_sf_contract,sf.contract,model_sf_contract,base.group_user,1,1,1,1
 access_salseforce_message_wizard,salseforce.message.wizard,model_salseforce_message_wizard,base.group_user,1,1,1,1
+access_sf_logging,access_sf_logging,model_sf_logging,base.group_user,1,1,1,1

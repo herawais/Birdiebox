@@ -1,14 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <record id="export_sale_order_to_salesforce" model="ir.actions.server">
-      <field name="name">Export to Salesforce</field>
-      <field name="model_id" ref="sale.model_sale_order"/>
-      <field name="binding_model_id" ref="sale.model_sale_order"/>
-      <field name="state">code</field>
-      <field name="code">
-		if records:
-		  records.exportToSalesForce()
-      </field>
+    <!--    <record id="export_sale_order_to_salesforce" model="ir.actions.server">-->
+    <!--        <field name="name">Export to Salesforce</field>-->
+    <!--        <field name="model_id" ref="sale.model_sale_order"/>-->
+    <!--        <field name="binding_model_id" ref="sale.model_sale_order"/>-->
+    <!--        <field name="state">code</field>-->
+    <!--        <field name="code">-->
+    <!--            if records:-->
+    <!--            records.exportToSalesForce()-->
+    <!--        </field>-->
+    <!--    </record>-->
+
+    <record id="export_custom_sale_order_to_salesforce" model="ir.actions.server">
+        <field name="name">Export to Custom Salesforce Sale Order</field>
+        <field name="model_id" ref="sale.model_sale_order"/>
+        <field name="binding_model_id" ref="sale.model_sale_order"/>
+        <field name="state">code</field>
+        <field name="code">
+            if records:
+            records.exportCustomSaleOrder_to_sf()
+        </field>
     </record>
     <!-- <record id="export_quote_to_salesforce" model="ir.actions.server">
       <field name="name">Export Quotations to Salesforce</field>
@@ -27,8 +38,14 @@
         <field name="arch" type="xml">
             <field name="payment_term_id" position="after">
                 <field name="x_salesforce_id" readonly="1"/>
-                <field name="contract_id"/>
+                <field name="custom_so_salesforce_id" readonly="1"/>
+                <field name="contract_id" readonly="1"/>
+                <field name="package_salesforce_id" readonly="1"/>
+
             </field>
-        </field> 
+            <xpath expr="//field[@name='order_line']/form//field[@name='price_unit']" position="before">
+                <field name="custom_soline_salesforce_id" readonly="1"/>
+            </xpath>
+        </field>
     </record>
 </odoo>

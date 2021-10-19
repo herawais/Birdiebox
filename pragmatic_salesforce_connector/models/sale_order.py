@@ -118,8 +118,8 @@ class SaleOrderCust(models.Model):
             if self.name:
                 order_dict['Odoo_Order_Number__c'] = self.name
 
-            if self.x_studio_sample_order_type:
-                order_dict['Sample_Order_Type__c'] = self.x_studio_sample_order_type
+            # if self.x_studio_sample_order_type:
+            #     order_dict['Sample_Order_Type__c'] = self.x_studio_sample_order_type
 
             if self.x_studio_type_of_order:
                 order_dict['Type_of_Order__c'] = self.x_studio_type_of_order
@@ -252,36 +252,201 @@ class SaleOrderCust(models.Model):
                 if line.custom_soline_salesforce_id or line.sale_order_line_updated:
                     if line.product_id and line.product_id.x_salesforce_id and line.product_id.type != 'service':
                         line.sale_order_line_updated = False
-                        order_item_dict.update({'Product__c': line.product_id.x_salesforce_id,
-                                                'Quantity__c': line.product_uom_qty, 'Price__c': line.price_unit,
-                                                'Customization_Details__c': line.x_studio_customization_detail,
-                                                'Item_Notes__c': line.x_studio_customization_notes,
-                                                })
+                        sf_config = self.env.user.company_id
+                        endpoint = None
+                        sf_access_token = None
+                        if sf_config.sf_access_token:
+                            sf_access_token = sf_config.sf_access_token
+                        if sf_access_token:
+                            headers = {}
+                            payload = {}
+                            headers['Authorization'] = 'Bearer ' + str(sf_access_token)
+                            headers['Content-Type'] = 'application/json'
+                            headers['Accept'] = 'application/json'
+                            endpoint = '/services/data/v40.0/sobjects/Product2'
+                            if line.product_id.x_salesforce_id:
+                                ''' Try Updating it if already exported '''
+                                prod_line_dict={'Price__c':line.price_unit}
+                                payload = json.dumps(prod_line_dict)
+
+                                res = requests.request('PATCH', sf_config.sf_url + endpoint + '/' + line.product_id.x_salesforce_id,
+                                                       headers=headers,
+                                                       data=payload)
+                                if res.status_code in [200, 201, 204]:
+                                    order_item_dict.update({'Product__c': line.product_id.x_salesforce_id,
+                                                            'Quantity__c': line.product_uom_qty,
+                                                            'Price__c': line.price_unit,
+                                                            'Customization_Details__c': line.x_studio_customization_detail,
+                                                            'Item_Notes__c': line.x_studio_customization_notes,
+                                                            })
+                                else:
+                                    order_item_dict.update({'Product__c': line.product_id.x_salesforce_id,
+                                                            'Quantity__c': line.product_uom_qty,
+                                                            'Price__c': line.price_unit,
+                                                            'Customization_Details__c': line.x_studio_customization_detail,
+                                                            'Item_Notes__c': line.x_studio_customization_notes,
+                                                            })
+                        else:
+                            order_item_dict.update({'Product__c': line.product_id.x_salesforce_id,
+                                                    'Quantity__c': line.product_uom_qty,
+                                                    'Price__c': line.price_unit,
+                                                    'Customization_Details__c': line.x_studio_customization_detail,
+                                                    'Item_Notes__c': line.x_studio_customization_notes,
+                                                    })
+
+
                     elif line.product_id and not line.product_id.x_salesforce_id and line.product_id.type != 'service':
                         line.sale_order_line_updated = False
                         line.product_id.exportProduct_to_sf()
-                        order_item_dict.update({'Product__c': line.product_id.x_salesforce_id,
-                                                'Quantity__c': line.product_uom_qty, 'Price__c': line.price_unit,
-                                                'Customization_Details__c': line.x_studio_customization_detail,
-                                                'Item_Notes__c': line.x_studio_customization_notes,
-                                                })
+                        sf_config = self.env.user.company_id
+                        endpoint = None
+                        sf_access_token = None
+                        if sf_config.sf_access_token:
+                            sf_access_token = sf_config.sf_access_token
+                        if sf_access_token:
+                            headers = {}
+                            payload = {}
+                            headers['Authorization'] = 'Bearer ' + str(sf_access_token)
+                            headers['Content-Type'] = 'application/json'
+                            headers['Accept'] = 'application/json'
+                            endpoint = '/services/data/v40.0/sobjects/Product2'
+                            if line.product_id.x_salesforce_id:
+                                ''' Try Updating it if already exported '''
+                                prod_line_dict = {'Price__c': line.price_unit}
+                                payload = json.dumps(prod_line_dict)
+
+                                res = requests.request('PATCH',
+                                                       sf_config.sf_url + endpoint + '/' + line.product_id.x_salesforce_id,
+                                                       headers=headers,
+                                                       data=payload)
+                                if res.status_code in [200, 201, 204]:
+                                    order_item_dict.update({'Product__c': line.product_id.x_salesforce_id,
+                                                            'Quantity__c': line.product_uom_qty,
+                                                            'Price__c': line.price_unit,
+                                                            'Customization_Details__c': line.x_studio_customization_detail,
+                                                            'Item_Notes__c': line.x_studio_customization_notes,
+                                                            })
+                                else:
+                                    order_item_dict.update({'Product__c': line.product_id.x_salesforce_id,
+                                                            'Quantity__c': line.product_uom_qty,
+                                                            'Price__c': line.price_unit,
+                                                            'Customization_Details__c': line.x_studio_customization_detail,
+                                                            'Item_Notes__c': line.x_studio_customization_notes,
+                                                            })
+                        else:
+                            order_item_dict.update({'Product__c': line.product_id.x_salesforce_id,
+                                                    'Quantity__c': line.product_uom_qty,
+                                                    'Price__c': line.price_unit,
+                                                    'Customization_Details__c': line.x_studio_customization_detail,
+                                                    'Item_Notes__c': line.x_studio_customization_notes,
+                                                    })
+                        # order_item_dict.update({'Product__c': line.product_id.x_salesforce_id,
+                        #                         'Quantity__c': line.product_uom_qty, 'Price__c': line.price_unit,
+                        #                         'Customization_Details__c': line.x_studio_customization_detail,
+                        #                         'Item_Notes__c': line.x_studio_customization_notes,
+                        #                         })
                     line_sf_id = line.custom_soline_salesforce_id
                     line_id = line.id
 
                 else:
                     if line.product_id and line.product_id.x_salesforce_id and line.product_id.type != 'service':
-                        order_item_dict.update({'Product__c': line.product_id.x_salesforce_id,
-                                                'Quantity__c': line.product_uom_qty, 'Price__c': line.price_unit,
-                                                'Customization_Details__c': line.x_studio_customization_detail,
-                                                'Item_Notes__c': line.x_studio_customization_notes,
-                                                })
+                        # order_item_dict.update({'Product__c': line.product_id.x_salesforce_id,
+                        #                         'Quantity__c': line.product_uom_qty, 'Price__c': line.price_unit,
+                        #                         'Customization_Details__c': line.x_studio_customization_detail,
+                        #                         'Item_Notes__c': line.x_studio_customization_notes,
+                        #                         })
+                        sf_config = self.env.user.company_id
+                        endpoint = None
+                        sf_access_token = None
+                        if sf_config.sf_access_token:
+                            sf_access_token = sf_config.sf_access_token
+                        if sf_access_token:
+                            headers = {}
+                            payload = {}
+                            headers['Authorization'] = 'Bearer ' + str(sf_access_token)
+                            headers['Content-Type'] = 'application/json'
+                            headers['Accept'] = 'application/json'
+                            endpoint = '/services/data/v40.0/sobjects/Product2'
+                            if line.product_id.x_salesforce_id:
+                                ''' Try Updating it if already exported '''
+                                prod_line_dict = {'Price__c': line.price_unit}
+                                payload = json.dumps(prod_line_dict)
+
+                                res = requests.request('PATCH',
+                                                       sf_config.sf_url + endpoint + '/' + line.product_id.x_salesforce_id,
+                                                       headers=headers,
+                                                       data=payload)
+                                if res.status_code in [200, 201, 204]:
+                                    order_item_dict.update({'Product__c': line.product_id.x_salesforce_id,
+                                                            'Quantity__c': line.product_uom_qty,
+                                                            'Price__c': line.price_unit,
+                                                            'Customization_Details__c': line.x_studio_customization_detail,
+                                                            'Item_Notes__c': line.x_studio_customization_notes,
+                                                            })
+                                else:
+                                    order_item_dict.update({'Product__c': line.product_id.x_salesforce_id,
+                                                            'Quantity__c': line.product_uom_qty,
+                                                            'Price__c': line.price_unit,
+                                                            'Customization_Details__c': line.x_studio_customization_detail,
+                                                            'Item_Notes__c': line.x_studio_customization_notes,
+                                                            })
+                        else:
+                            order_item_dict.update({'Product__c': line.product_id.x_salesforce_id,
+                                                    'Quantity__c': line.product_uom_qty,
+                                                    'Price__c': line.price_unit,
+                                                    'Customization_Details__c': line.x_studio_customization_detail,
+                                                    'Item_Notes__c': line.x_studio_customization_notes,
+                                                    })
                     elif line.product_id and not line.product_id.x_salesforce_id and line.product_id.type != 'service':
                         line.product_id.exportProduct_to_sf()
-                        order_item_dict.update({'Product__c': line.product_id.x_salesforce_id,
-                                                'Quantity__c': line.product_uom_qty, 'Price__c': line.price_unit,
-                                                'Customization_Details__c': line.x_studio_customization_detail,
-                                                'Item_Notes__c': line.x_studio_customization_notes,
-                                                })
+                        sf_config = self.env.user.company_id
+                        endpoint = None
+                        sf_access_token = None
+                        if sf_config.sf_access_token:
+                            sf_access_token = sf_config.sf_access_token
+                        if sf_access_token:
+                            headers = {}
+                            payload = {}
+                            headers['Authorization'] = 'Bearer ' + str(sf_access_token)
+                            headers['Content-Type'] = 'application/json'
+                            headers['Accept'] = 'application/json'
+                            endpoint = '/services/data/v40.0/sobjects/Product2'
+                            if line.product_id.x_salesforce_id:
+                                ''' Try Updating it if already exported '''
+                                prod_line_dict = {'Price__c': line.price_unit}
+                                payload = json.dumps(prod_line_dict)
+
+                                res = requests.request('PATCH',
+                                                       sf_config.sf_url + endpoint + '/' + line.product_id.x_salesforce_id,
+                                                       headers=headers,
+                                                       data=payload)
+                                if res.status_code in [200, 201, 204]:
+                                    order_item_dict.update({'Product__c': line.product_id.x_salesforce_id,
+                                                            'Quantity__c': line.product_uom_qty,
+                                                            'Price__c': line.price_unit,
+                                                            'Customization_Details__c': line.x_studio_customization_detail,
+                                                            'Item_Notes__c': line.x_studio_customization_notes,
+                                                            })
+                                else:
+                                    order_item_dict.update({'Product__c': line.product_id.x_salesforce_id,
+                                                            'Quantity__c': line.product_uom_qty,
+                                                            'Price__c': line.price_unit,
+                                                            'Customization_Details__c': line.x_studio_customization_detail,
+                                                            'Item_Notes__c': line.x_studio_customization_notes,
+                                                            })
+                        else:
+                            order_item_dict.update({'Product__c': line.product_id.x_salesforce_id,
+                                                    'Quantity__c': line.product_uom_qty,
+                                                    'Price__c': line.price_unit,
+                                                    'Customization_Details__c': line.x_studio_customization_detail,
+                                                    'Item_Notes__c': line.x_studio_customization_notes,
+                                                    })
+                        #
+                        # order_item_dict.update({'Product__c': line.product_id.x_salesforce_id,
+                        #                         'Quantity__c': line.product_uom_qty, 'Price__c': line.price_unit,
+                        #                         'Customization_Details__c': line.x_studio_customization_detail,
+                        #                         'Item_Notes__c': line.x_studio_customization_notes,
+                        #                         })
                     line_id = line.id
 
                 if order_item_dict:

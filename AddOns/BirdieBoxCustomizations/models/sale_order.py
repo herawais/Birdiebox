@@ -282,6 +282,41 @@ class CustomSaleOrder(models.Model):
                         self.env['sale.order.line'].create(sale_order_line)
         return res
 
+    def mark_parent_shipped(self):
+        shipped_tags = self.env['crm.tag'].search([
+            '|','|',
+            ('name', '=', 'shipped'),
+            ('name', '=', 'Shipped'),
+            ('name', '=', 'Rolling Fulfillment')
+        ])
+
+        ship_tag = shipped_tags.filtered(lambda x: x.id == 15)
+        
+        parent_orders = self.env['sale.order'].search([
+            ('x_studio_related_sales_order', '=', False),
+            ('picking_ids', '=', False),
+            ('tag_ids', 'not in', shipped_tags.ids),
+        ])
+        
+        for parent_order in parent_orders:
+            not_completed_child_orders = self.env['stock.picking'].search([
+                ('sale_id.x_studio_related_sales_order', '=', parent_order.id),
+                ('picking_type_id', '=', 2),
+                ('state', 'not in', ['done', 'cancel'])
+            ])
+
+            completed_child_orders = self.env['stock.picking'].search([
+                ('sale_id.x_studio_related_sales_order', '=', parent_order.id),
+                ('picking_type_id', '=', 2),
+                ('state', '=', 'done')
+            ])
+
+            if len(not_completed_child_orders) > 0 or len(completed_child_orders) == 0:
+                continue
+            else:
+                parent_order.tag_ids = [(4, ship_tag.id, None)]
+                self.env.cr.commit()
+       
 class CustomSaleOrderLine(models.Model):
     _inherit = 'sale.order.line'
 

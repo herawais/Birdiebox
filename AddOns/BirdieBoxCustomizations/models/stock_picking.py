@@ -192,4 +192,7 @@ class CustomStockPicking(models.Model):
 
         shipped_tag = self.env['crm.tag'].sudo().search([('id', '=', 15)])
         if shipped_tag:
-            self.sale_id.tag_ids = [(4, shipped_tag.id, None)]
+            try:
+                self.sale_id.tag_ids = [(4, shipped_tag.id, None)]
+            except:
+                pass

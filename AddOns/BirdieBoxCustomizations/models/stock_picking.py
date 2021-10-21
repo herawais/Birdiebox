@@ -34,6 +34,9 @@ class CustomStockPicking(models.Model):
                 if record.picking_type_id.x_validate_carrier:
                     record.validate_carrier()
 
+                if record.carrier_id:
+                    record.add_shipped_tag()
+
                 if record.carrier_tracking_ref and record.sale_id.x_shopify_id and record.sale_id.x_studio_related_sales_order:
                     record.fulfill_shopify(tracking=record.carrier_tracking_ref)
             
@@ -182,3 +185,14 @@ class CustomStockPicking(models.Model):
         for moves_chunk in split_every(100, moves_to_assign.ids):
             self.env['stock.picking'].browse(moves_chunk).sudo().action_assign()
             self._cr.commit()
+
+    def add_shipped_tag(self):
+        if not self.sale_id:
+            return
+
+        shipped_tag = self.env['crm.tag'].sudo().search([('id', '=', 15)])
+        if shipped_tag:
+            try:
+                self.sale_id.tag_ids = [(4, shipped_tag.id, None)]
+            except:
+                pass

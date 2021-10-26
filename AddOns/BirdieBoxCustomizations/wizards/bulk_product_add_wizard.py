@@ -23,7 +23,7 @@ class BulkSaleProductWizard(models.Model):
                     if not line.product_id:
                         raise Exception('Please select a product in the dropdown!')
                     if not line.route_id:
-                        raise Exception('Please select a route for each product!')
+                        raise Exception('A route is required for each product.')
                     LINE.create(
                         {
                             "sequence": 2000,
@@ -39,7 +39,7 @@ class BulkSaleProductWizard(models.Model):
                         }
                     )
         except Exception as e:
-            raise ValidationError('There was an error adding products: ' + str(e))
+            raise ValidationError('Please correct the following error: ' + str(e))
 
 class BulkSaleProductLine(models.Model):
     _name = 'bulk.sale.product.line'

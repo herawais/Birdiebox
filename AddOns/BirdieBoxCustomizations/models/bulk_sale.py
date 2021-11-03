@@ -76,7 +76,7 @@ class BulkSale(models.Model):
 
             state = STATE.search([
                 '|', ('name', '=', self.state), ('code', '=', self.state),
-                ('country_id', '=', country.id)
+                ('country_id', '=', country.id),('create_uid', '=', 1)
             ])
 
             if len(state) > 1:

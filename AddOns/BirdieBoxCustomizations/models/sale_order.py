@@ -56,7 +56,7 @@ class CustomSaleOrder(models.Model):
             if not len(country_id):
                 raise Exception('Could not find the selected country for this order in Odoo.')
 
-            state_id = STATE.search([('code', 'ilike', shipping_details.get('province_code')), ('country_id', '=', country_id.id)],limit=1)
+            state_id = STATE.search([('code', 'ilike', shipping_details.get('province_code')), ('country_id', '=', country_id.id),('create_uid', '=', 1)],limit=1)
             if not len(state_id):
                 raise Exception('Could not find the selected state for this order in Odoo.')
             

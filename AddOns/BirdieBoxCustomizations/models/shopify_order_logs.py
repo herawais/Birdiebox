@@ -47,4 +47,4 @@ class ShopifyOrderLog(models.Model):
             order = brest.get_order_details(order_id=self.order_id)            
             self.env['sale.order'].create_shopify_order(order, self.shop.shop_id)
         except Exception as e:
-            raise Exception('There was an error pulling the order from Shopify: \n' + str(e))
+            raise ValidationError('There was an error pulling the order from Shopify: \n' + str(e))

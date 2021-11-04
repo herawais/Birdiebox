@@ -223,6 +223,18 @@ class CustomSaleOrder(models.Model):
             except Exception as e:
                 raise Exception('There was an error updating the parent\'s sale order quantites for this order in Odoo\n ' + str(e))
         
+            SHOPIFY_LOG.create(
+                {
+                    "order_id": order.get('id'),
+                    "shop": shop.id,
+                    "sale_id": None,
+                    "error": None,
+                    "body": order,
+                    "res": None,
+                    "success": True
+                }
+            )
+
         except Exception as e:
             _logger.error(e)
             SHOPIFY_LOG.create(
@@ -235,17 +247,6 @@ class CustomSaleOrder(models.Model):
                     "res": None
                 }
             )
-        SHOPIFY_LOG.create(
-            {
-                "order_id": order.get('id'),
-                "shop": shop.id,
-                "sale_id": None,
-                "error": None,
-                "body": order,
-                "res": None,
-                "success": True
-            }
-        )
 
     def confirm_shopify_orders(self):
         orders = self.search([('x_shopify_id', '!=', False), ('state', 'not in', ['cancel', 'sale', 'done'])])

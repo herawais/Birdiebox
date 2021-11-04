@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import logging
+import datetime
 
 from odoo import _, api, fields, models
 from odoo.exceptions import ValidationError
@@ -195,6 +196,10 @@ class BulkSale(models.Model):
                         "product_uom_qty": 1.0
                     }))
 
+            commitment_date = so.commitment_date
+            if so.x_roll_fulfillment > 0:
+                commitment_date = datetime.datetime.now() + datetime.timedelta(days=so.x_roll_fulfillment)
+            
             sale_order_body = {
                 "company_id": so.company_id.id,
                 "warehouse_id": so.warehouse_id.id,
@@ -206,7 +211,8 @@ class BulkSale(models.Model):
                 "date_order": so.date_order,
                 "team_id": so.team_id.id,
                 "carrier_id": so.carrier_id.id,
-                "commitment_date": so.commitment_date,
+                "x_roll_fulfillment": so.x_roll_fulfillment,
+                "commitment_date": commitment_date,
                 "x_studio_google_drive_link": so.x_studio_google_drive_link,
                 "x_studio_kitting": so.x_studio_kitting,
                 "x_studio_letter_content_1": so.x_studio_letter_content_1,

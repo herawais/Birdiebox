@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import json
 import logging
+import datetime
 
 from odoo import _, api, fields, models
 from odoo.exceptions import ValidationError
@@ -14,6 +15,13 @@ class CustomSaleOrder(models.Model):
 
     x_shopify_id = fields.Char('Shopify ID')
     
+    x_roll_fulfillment = fields.Integer(
+        string='In Hand Window (Days)',
+        default=0,
+        help=
+        "If this is set, all child orders will have an In Hand date x number of days out \
+              based on this field and when the child order was created.")
+
     def action_confirm(self):
         if self.x_studio_shipping_type in ['Individual', 'Bulk Freight and Individual', 'Bulk Ground and Individual'] and not self.x_studio_related_sales_order:
             self.state = 'sale'
@@ -172,6 +180,10 @@ class CustomSaleOrder(models.Model):
                         "route_id": route
                     }))
             
+            commitment_date = parent_so.commitment_date
+            if parent_so.x_roll_fulfillment > 0:
+                commitment_date = datetime.datetime.now() + datetime.timedelta(days=parent_so.x_roll_fulfillment)
+
             order_payload = {
                 "company_id": 1,
                 "warehouse_id": 1,
@@ -184,7 +196,8 @@ class CustomSaleOrder(models.Model):
                 "date_order": parent_so.date_order,
                 "team_id": parent_so.team_id and parent_so.team_id.id or None,
                 "carrier_id":  parent_so.carrier_id and parent_so.carrier_id.id or None,
-                "commitment_date": parent_so.commitment_date,
+                "x_roll_fulfillment": parent_so.x_roll_fulfillment,
+                "commitment_date": commitment_date,
                 "x_studio_google_drive_link": parent_so.x_studio_google_drive_link,
                 "x_studio_kitting": parent_so.x_studio_kitting,
                 "x_studio_letter_content_1": parent_so.x_studio_letter_content_1,

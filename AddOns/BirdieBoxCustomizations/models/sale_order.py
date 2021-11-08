@@ -253,10 +253,15 @@ class CustomSaleOrder(models.Model):
 
         for order in orders:
             try:
+                _logger.debug('\n%s', order.name)
                 order.action_confirm()
-            except:
+            except Exception as e:
+                order.env.cr.rollback()
+                _logger.error('%s - %s', order.name, str(e))
                 pass
-            self.env.cr.commit()
+            else:
+                self.env.cr.commit()
+
     @api.model
     def create(self, vals):
         res = super(CustomSaleOrder, self).create(vals)

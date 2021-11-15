@@ -6,3 +6,5 @@ access_res_printers,res.printers.access,model_res_printers,base.group_user,1,1,1
 access_res_printer_settings,res.printer.settings.access,model_res_printer_settings,base.group_user,1,1,1,1
 access_bulk_add_wizard,bulk.add.create.access,model_bulk_sale_product,base.group_user,1,1,1,1
 access_bulk_add_wizard_line,bulk.add.create.line.access,model_bulk_sale_product_line,base.group_user,1,1,1,1
+access_bulk_swap_wizard,bulk.swap.create.access,model_bulk_sale_product_swap,base.group_user,1,1,1,1
+access_bulk_swap_wizard_line,bulk.swap.create.line.access,model_bulk_sale_product_swap_line,base.group_user,1,1,1,1

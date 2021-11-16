@@ -59,11 +59,13 @@
                                     t-att-res-id="line['document_out'].id"/>
                             </td>
                             <td t-attf-class="#{not line['replenishment_filled'] and 'o_grid_warning'}">
-                                <a t-if="line['document_out']"
-                                    t-attf-href="#" t-esc="line['document_out'].x_studio_related_sales_order.name"
-                                    class="font-weight-bold" view-type="form"
-                                    t-att-res-model="line['document_out'].x_studio_related_sales_order._name"
-                                    t-att-res-id="line['document_out'].x_studio_related_sales_order.id"/>
+                                <div t-if="line['document_out']">
+                                    <a t-if="line['document_out'].name[0] == 'S'"
+                                        t-attf-href="#" t-esc="line['document_out'].x_studio_related_sales_order.name"
+                                        class="font-weight-bold" view-type="form"
+                                        t-att-res-model="line['document_out'].x_studio_related_sales_order._name"
+                                        t-att-res-id="line['document_out'].x_studio_related_sales_order.id"/>
+                                </div>
                             </td>
                             <td t-esc="line['delivery_date'] or ''"
                                 t-attf-class="#{not line['replenishment_filled'] and 'o_grid_warning'}"/>

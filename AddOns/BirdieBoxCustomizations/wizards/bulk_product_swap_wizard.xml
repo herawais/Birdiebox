@@ -19,7 +19,7 @@
             <b>No matching products found to swap for selected sale orders.</b>
         </div>
         <group style="width: 100%;">
-            <field name="product_to_replace" attrs="{'invisible': [('matching_products', '=', False)]}"/>
+            <field name="product_to_replace" attrs="{'invisible': [('matching_products', '=', False)]}" options="{'no_create': True}"/>
             <field name="matching_products" invisible="1"/>
         </group>
         <group style="width: 100%;">

@@ -15,12 +15,15 @@
     <field name="model">bulk.sale.product.swap</field>
     <field name="arch" type="xml">
       <form string="Product Swap">
-        
+        <div class="alert alert-danger"  role="alert" attrs="{'invisible': [('matching_products', '=', True)]}">
+            <b>No matching products found to swap for selected sale orders.</b>
+        </div>
         <group style="width: 100%;">
-            <field name="product_to_replace" />
+            <field name="product_to_replace" attrs="{'invisible': [('matching_products', '=', False)]}"/>
+            <field name="matching_products" invisible="1"/>
         </group>
         <group style="width: 100%;">
-          <field name="product_line" widget="one2many" nolabel="1" style="width: 100%;" options="{'no_create': True}">
+          <field name="product_line" widget="one2many" nolabel="1" style="width: 100%;" options="{'no_create': True}" attrs="{'invisible': [('matching_products', '=', False)]}">
             <tree string="Order Lines" editable="top">
               <field name="product_id"   />
               <field name="name" readonly="1" invisible="1"/>
@@ -34,7 +37,7 @@
           </field>
         </group>
         <footer>
-          <button type="object" name="do_swap" string="Swap"  class="btn-primary" />
+          <button type="object" name="do_swap" string="Swap"  class="btn-primary" attrs="{'invisible': [('matching_products', '=', False)]}"/>
           <button special="cancel" string="Cancel"  class="btn-secondary" />
         </footer>
       </form>

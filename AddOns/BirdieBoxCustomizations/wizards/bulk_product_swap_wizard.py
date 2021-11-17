@@ -15,20 +15,22 @@ class BulkSaleProductSwapWizard(models.Model):
         active_orders = self.env['sale.order'].browse(
             self._context.get('active_ids', []))
 
-        products = []
-        for index, order in enumerate(active_orders):
-            if index == 0:
-                for line in order.order_line:
-                    products.append(line.product_id.id)
-            else:
-                found_products = [
-                    product.product_id.id for product in order.order_line
-                ]
-                for product in products:
-                    if product not in found_products:
-                        products.remove(product)
+        all_products = []
+        for order in active_orders:
+            products = []
+            for line in order.order_line:
+                products.append(line.product_id.id)
+            all_products.append(products)
 
-        return [('id', 'in', products)]
+        try:
+            matches = list(set.intersection(*map(set, all_products)))
+        except:
+            matches = []
+
+        if len(matches):
+            return [('id', 'in', matches)]
+        else:
+            return []
 
     product_to_replace = fields.Many2one(
         'product.product',
@@ -40,16 +42,27 @@ class BulkSaleProductSwapWizard(models.Model):
     product_line = fields.One2many('bulk.sale.product.swap.line',
                                    'create_id',
                                    string='Order Lines')
-    
-    
+
+    matching_products = fields.Boolean(string="Has Matching Products",
+                                       store=False,
+                                       compute='_compute_matching')
+
+    @api.depends('product_to_replace')
+    def _compute_matching(self):
+        matches = self._default_swappable_products_domain()
+        if len(matches):
+            self.matching_products = True
+        else:
+            self.matching_products = False
+
     def do_swap(self):
         try:
             active_orders = self.env['sale.order'].browse(
                 self._context.get('active_ids', []))
-            
+
             if not self.product_to_replace:
                 raise ValidationError('Please enter a product to replace.')
-            
+
             for order in active_orders.sudo():
                 sale_line_to_zero = order.order_line.filtered(
                     lambda x: x.product_id.id == self.product_to_replace.id)
@@ -75,29 +88,34 @@ class BulkSaleProductSwapWizard(models.Model):
                 ])
                 for line in move_lines:
                     line.unlink()
-                
+
                 if len(self.product_line):
                     for line in self.product_line:
                         if not line.product_id:
-                            raise ValidationError('Please enter a product to swap.')
+                            raise ValidationError(
+                                'Please enter a product to swap.')
                         if not line.route_id:
-                            raise ValidationError('A route is required for every product.')
+                            raise ValidationError(
+                                'A route is required for every product.')
                         if line.product_uom_qty < 1:
-                            raise ValidationError('Please enter a quantity greater than 0.')
+                            raise ValidationError(
+                                'Please enter a quantity greater than 0.')
 
                         swap_body = {
                             "order_id": order.id,
                             "product_id": line.product_id.id,
                             "name": line.product_id.name,
-                            "x_studio_customization_detail": line.x_studio_customization_detail,
-                            "x_studio_customization_notes": line.x_studio_customization_notes,
+                            "x_studio_customization_detail":
+                            line.x_studio_customization_detail,
+                            "x_studio_customization_notes":
+                            line.x_studio_customization_notes,
                             "price_unit": line.price_unit,
                             "tax_id": None,
                             "product_uom_qty": line.product_uom_qty,
                             "route_id": line.route_id.id
                         }
                         order.env['sale.order.line'].create(swap_body)
-                    
+
                     for picking in pickings:
                         moves_with_qty = order.env['stock.move'].search([
                             ('picking_id', '=', picking.id),
@@ -108,10 +126,12 @@ class BulkSaleProductSwapWizard(models.Model):
                             picking.action_cancel()
 
                 else:
-                    raise ValidationError('Please enter product(s) to be added.')
+                    raise ValidationError(
+                        'Please enter product(s) to be added.')
         except Exception as e:
             _logger.error(e)
-            raise ValidationError(_('There was an error swapping these products: %s', str(e)))
+            raise ValidationError(
+                _('There was an error swapping these products: %s', str(e)))
 
 
 class BulkSaleProductSwapLine(models.Model):
@@ -123,18 +143,13 @@ class BulkSaleProductSwapLine(models.Model):
     x_studio_customization_notes = fields.Char('Customization Notes')
     price_unit = fields.Float('Unit Price', digits='Product Price')
     x_studio_customization_detail = fields.Selection(
-        [
-         ('Logo', 'Logo'), 
-         ('Initial', 'Initial'), 
-         ('Full Name', 'Full Name'),
+        [('Logo', 'Logo'), ('Initial', 'Initial'), ('Full Name', 'Full Name'),
          ('Logo and Name', 'Logo and Name'),
          ('First Letter and Name', 'First Letter and Name'),
          ('Full Lid Print', 'Full Lid Print'),
          ('Full Lid Print', 'Full Lid Print'),
-         ('Logo and Initials', 'Logo and Initials')
-        ],
-        string="Customization Detail"
-    )
+         ('Logo and Initials', 'Logo and Initials')],
+        string="Customization Detail")
 
     price_subtotal = fields.Float(string='Subtotal',
                                   compute='_compute_amount',
@@ -150,7 +165,7 @@ class BulkSaleProductSwapLine(models.Model):
         'account.tax',
         string='Taxes',
         domain=['|', ('active', '=', False), ('active', '=', True)])
-    
+
     route_id = fields.Many2one('stock.location.route',
                                string='Route',
                                domain=[('sale_selectable', '=', True)],

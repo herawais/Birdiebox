@@ -26,7 +26,8 @@
         'views/res_users_menu.xml',
         'views/shopify.xml',
         'views/sale_order.xml',
-        'wizards/bulk_product_add_wizard.xml'
+        'wizards/bulk_product_add_wizard.xml',
+        'wizards/bulk_product_swap_wizard.xml'
     ],
     'application':
     True,

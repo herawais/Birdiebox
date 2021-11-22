@@ -31,7 +31,7 @@ class CustomSaleOrder(models.Model):
     
     def action_cancel_bulk(self):
         for order in self:
-            order.action_cancel()
+            order.with_context({'disable_cancel_warning': True}).action_cancel()
 
     def create_shopify_order(self,order, shop_name):
         COUNTRY = self.env['res.country']

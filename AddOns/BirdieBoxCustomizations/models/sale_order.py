@@ -28,6 +28,10 @@ class CustomSaleOrder(models.Model):
                 raise ValidationError(e)
 
             return res
+    
+    def action_cancel_bulk(self):
+        for order in self:
+            order.with_context({'disable_cancel_warning': True}).action_cancel()
 
     def create_shopify_order(self,order, shop_name):
         COUNTRY = self.env['res.country']

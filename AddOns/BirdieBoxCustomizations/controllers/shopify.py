@@ -273,12 +273,9 @@ class BirdieBox_Shopify_WH(http.Controller):
         req = http.request.httprequest
         raw_shopify_data = req.get_data().decode('UTF-8')
         headers = req.headers
-        # sh_shop_domain = headers.get('X-Shopify-Shop-Domain')
-        # shop_name = sh_shop_domain.split('.')[0]
+        sh_shop_domain = headers.get('X-Shopify-Shop-Domain')
+        shop_name = sh_shop_domain.split('.')[0]
 
-        shop_name = 'red-river-bowl'
-
-        
         hmac_header = headers.get('X-Shopify-Hmac-Sha256')
         # ============================================================================
         # Confirm the Webhook is coming from Shopify with the shared secret..

@@ -46,43 +46,83 @@ class CustomSaleOrder(models.Model):
         
         order_lines = []
         partner_payload = {}
+        bulk_partner = False
         
         try:
-            shipping_details = order.get('shipping_address')
-            if not shipping_details:
-                raise Exception('No shipping address was entered for this order in Shopify.')
+            if parent_so.x_studio_shipping_type not in ['Bulk - Freight', 'Bulk - Ground']:                
+                shipping_details = order.get('shipping_address')
+                if not shipping_details:
+                    raise Exception('No shipping address was entered for this order in Shopify. Should the parent order be configured to be a bulk order?')
             
+                country_id = COUNTRY.search([('code', 'ilike', shipping_details.get('country_code'))],limit=1)
+                if not len(country_id):
+                    raise Exception('Could not find the selected country for this order in Odoo.')
+
+                state_id = STATE.search([('code', 'ilike', shipping_details.get('province_code')), ('country_id', '=', country_id.id),('create_uid', '=', 1)],limit=1)
+                if not len(state_id):
+                    raise Exception('Could not find the selected state for this order in Odoo.')
+            
+                partner_payload = {
+                    "name": str(shipping_details.get('first_name') + ' ' + shipping_details.get('last_name')).strip(),
+                    "street": shipping_details.get('address1'),
+                    "street2": shipping_details.get('address2'),
+                    "city": shipping_details.get('city'),
+                    "zip": shipping_details.get('zip'),
+                    "country_id": country_id.id,
+                    "state_id": state_id.id,
+                    "phone": 14692942500,
+                    "type": "delivery",
+                    "property_account_receivable_id": 2,
+                    "property_account_payable_id": 1,
+                    "parent_id": parent_so.partner_id.id
+                }
+
+                try:
+                    partner = PARTNER.create(partner_payload)
+                except Exception as e:
+                    raise Exception('There was an error creating the partner for this order in Odoo.\n ' + str(e))
+
+            else:
+                order_coupons = order.get('discount_codes')
+                if not len(order_coupons):
+                      raise Exception('No coupon code found for this bulk order.')  
+                
+                for coupon in order_coupons:
+                    for shop_coupons in shop.coupons:
+                        if str(coupon.get('code')).lower().startswith(str(shop_coupons.code_prefix).lower()):
+                            bulk_partner = shop_coupons.partner_id
+                
+                if not bulk_partner:
+                    raise Exception('Could not find a matching partner for this specified Shopify discount code.')
+
+                
+                customer_details = order.get('customer')
+                if not customer_details:
+                    raise Exception('No customer details found for this order in Shopify.')
+                
+                partner_payload = {
+                    "name": str(customer_details.get('first_name') + ' ' + customer_details.get('last_name')).strip(),
+                    "street": bulk_partner.street,
+                    "street2": bulk_partner.street2,
+                    "city": bulk_partner.city,
+                    "zip": bulk_partner.zip,
+                    "country_id": bulk_partner.country_id.id,
+                    "state_id": bulk_partner.state_id.id,
+                    "phone": bulk_partner.phone,
+                    "type": "delivery",
+                    "property_account_receivable_id": 2,
+                    "property_account_payable_id": 1,
+                    "parent_id": bulk_partner.id
+                }
+
+                try:
+                    partner = PARTNER.create(partner_payload)
+                except Exception as e:
+                    raise Exception('There was an error creating the partner for this order in Odoo.\n ' + str(e))
+
             product_details = order.get('line_items')
             if not product_details:
                 raise Exception('No products were entered for this order in Shopify.')
-            
-            country_id = COUNTRY.search([('code', 'ilike', shipping_details.get('country_code'))],limit=1)
-            if not len(country_id):
-                raise Exception('Could not find the selected country for this order in Odoo.')
-
-            state_id = STATE.search([('code', 'ilike', shipping_details.get('province_code')), ('country_id', '=', country_id.id),('create_uid', '=', 1)],limit=1)
-            if not len(state_id):
-                raise Exception('Could not find the selected state for this order in Odoo.')
-            
-            partner_payload = {
-                "name": str(shipping_details.get('first_name') + ' ' + shipping_details.get('last_name')).strip(),
-                "street": shipping_details.get('address1'),
-                "street2": shipping_details.get('address2'),
-                "city": shipping_details.get('city'),
-                "zip": shipping_details.get('zip'),
-                "country_id": country_id.id,
-                "state_id": state_id.id,
-                "phone": 14692942500,
-                "type": "delivery",
-                "property_account_receivable_id": 2,
-                "property_account_payable_id": 1,
-                "parent_id": parent_so.partner_id.id
-            }
-
-            try:
-                partner = PARTNER.create(partner_payload)
-            except Exception as e:
-                raise Exception('There was an error creating the partner for this order in Odoo.\n ' + str(e))
 
             for product in product_details:
                 shopify_sku = str(product.get('sku')).strip()
@@ -176,6 +216,12 @@ class CustomSaleOrder(models.Model):
                         "route_id": route
                     }))
             
+            order_partner = partner.id
+            carrier_id = parent_so.carrier_id and parent_so.carrier_id.id or None
+            if bulk_partner:
+                order_partner = bulk_partner.id
+                carrier_id = None
+            
             order_payload = {
                 "company_id": 1,
                 "warehouse_id": 1,
@@ -184,10 +230,10 @@ class CustomSaleOrder(models.Model):
                 "x_shopify_id": order.get('id'),
                 "partner_invoice_id": parent_so.partner_id and parent_so.partner_id.id or None,
                 "partner_shipping_id": partner.id,
-                "partner_id": partner.id,
+                "partner_id": order_partner,
                 "date_order": parent_so.date_order,
                 "team_id": parent_so.team_id and parent_so.team_id.id or None,
-                "carrier_id":  parent_so.carrier_id and parent_so.carrier_id.id or None,
+                "carrier_id":  carrier_id,
                 "commitment_date": parent_so.commitment_date,
                 "x_studio_google_drive_link": parent_so.x_studio_google_drive_link,
                 "x_studio_kitting": parent_so.x_studio_kitting,

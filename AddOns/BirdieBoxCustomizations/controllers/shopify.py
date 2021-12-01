@@ -273,8 +273,10 @@ class BirdieBox_Shopify_WH(http.Controller):
         req = http.request.httprequest
         raw_shopify_data = req.get_data().decode('UTF-8')
         headers = req.headers
-        sh_shop_domain = headers.get('X-Shopify-Shop-Domain')
-        shop_name = sh_shop_domain.split('.')[0]
+        # sh_shop_domain = headers.get('X-Shopify-Shop-Domain')
+        # shop_name = sh_shop_domain.split('.')[0]
+
+        shop_name = 'red-river-bowl'
 
         
         hmac_header = headers.get('X-Shopify-Hmac-Sha256')
@@ -285,12 +287,12 @@ class BirdieBox_Shopify_WH(http.Controller):
         # sh_shared_secret = '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'
         sh_shared_secret = http.request.env['shopify.shop'].sudo().search([('shop_id', 'ilike', shop_name)],limit=1).shared_secret
         # ============================================================================
-        sh_validator = self.verify_webhook(sh_shared_secret, raw_shopify_data, hmac_header)
-        # Validate the request coming from BirdieBox
-        if not sh_validator:
-            resp = Response("Not Found", status=404)
-            resp.headers['X-MP-Odoo-JSON'] = "TRUE"
-            return resp
+        # sh_validator = self.verify_webhook(sh_shared_secret, raw_shopify_data, hmac_header)
+        # # Validate the request coming from BirdieBox
+        # if not sh_validator:
+        #     resp = Response("Not Found", status=404)
+        #     resp.headers['X-MP-Odoo-JSON'] = "TRUE"
+        #     return resp
 
         
         

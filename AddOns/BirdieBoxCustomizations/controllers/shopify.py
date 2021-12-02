@@ -276,7 +276,6 @@ class BirdieBox_Shopify_WH(http.Controller):
         sh_shop_domain = headers.get('X-Shopify-Shop-Domain')
         shop_name = sh_shop_domain.split('.')[0]
 
-        
         hmac_header = headers.get('X-Shopify-Hmac-Sha256')
         # ============================================================================
         # Confirm the Webhook is coming from Shopify with the shared secret..

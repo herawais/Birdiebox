@@ -30,6 +30,19 @@
                         <field name="shared_secret" /> 
                     </group>
                 </group>
+
+                <notebook>
+                    <page string="Bulk Configuration">
+                        <group>
+                            <field name="coupons" widget="one2many" nolabel="1" style="width: 100%;">
+                                <tree string="Coupons" editable="top">
+                                    <field name="code_prefix"   />
+                                    <field name="partner_id" />
+                                </tree>
+                            </field>
+                        </group>
+                    </page>
+                </notebook>
             </sheet>
         </form>
         </field>

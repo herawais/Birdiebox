@@ -30,6 +30,10 @@ class ShopifyShop(models.Model):
 
     connected = fields.Boolean('Connected', default=False)
 
+    coupons = fields.One2many('shopify.coupon',
+                                   'shop_id',
+                                   string='Coupons')
+    
     @api.depends('shop_id')
     def _compute_shop_url(self):
         for record in self:
@@ -46,3 +50,16 @@ class ShopifyShop(models.Model):
                 self.connected = True
             else:
                 self.connected = False
+
+class ShopifyCoupon(models.Model): 
+    _name = 'shopify.coupon'
+    _description = "Shopify Coupons"
+
+    code_prefix = fields.Char("Coupon Code Pre-fix")
+
+    partner_id = fields.Many2one('res.partner', string="Partner")
+
+    shop_id = fields.Many2one('shopify.shop',
+                                string='Shopify Store',
+                                index=True,
+                                ondelete='cascade')

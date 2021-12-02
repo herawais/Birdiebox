@@ -15,7 +15,7 @@ class CustomSaleOrder(models.Model):
     x_shopify_id = fields.Char('Shopify ID')
     
     def action_confirm(self):
-        if self.x_studio_shipping_type in ['Individual', 'Bulk Freight and Individual', 'Bulk Ground and Individual'] and not self.x_studio_related_sales_order:
+        if self.x_studio_shipping_type in ['Individual', 'Bulk - Parent'] and not self.x_studio_related_sales_order:
             self.state = 'sale'
         else:
             res = super(CustomSaleOrder, self).action_confirm()
@@ -49,7 +49,7 @@ class CustomSaleOrder(models.Model):
         bulk_partner = False
         
         try:
-            if parent_so.x_studio_shipping_type not in ['Bulk - Freight', 'Bulk - Ground']:                
+            if parent_so.x_studio_shipping_type not in ['Bulk - Parent']:                
                 shipping_details = order.get('shipping_address')
                 if not shipping_details:
                     raise Exception('No shipping address was entered for this order in Shopify. Should the parent order be configured to be a bulk order?')
@@ -389,7 +389,7 @@ class CustomSaleOrderLine(models.Model):
 
     def _action_launch_stock_rule(self, previous_product_uom_qty=False):
         try:
-            if self.order_id.x_studio_shipping_type in ['Individual', 'Bulk Freight and Individual', 'Bulk Ground and Individual'] and not self.order_id.x_studio_related_sales_order:
+            if self.order_id.x_studio_shipping_type in ['Individual', 'Bulk - Parent'] and not self.order_id.x_studio_related_sales_order:
                 return
         except:
             pass

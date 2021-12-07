@@ -1,5 +1,6 @@
 from odoo import fields, models, api, _
 from odoo.exceptions import UserError
+from datetime import datetime, timedelta
 import json
 import requests
 import logging
@@ -89,13 +90,15 @@ class SaleOrderCust(models.Model):
 
     @api.model
     def _scheduler_export_custom_orders_to_sf(self):
-        orders = self.sudo().search([])
-        for order in orders:
-            try:
-                if order.state in ['sale', 'done', 'cancel', 'draft', 'sent']:
-                    order.exportCustomSaleOrder_to_sf()
-            except Exception as e:
-                _logger.error('Oops Some error in  exporting custom orders to SALESFORCE %s', e)
+        company_id = self.env.user.company_id
+        if company_id:
+            orders = self.sudo().search([('write_date', '>', self.env.user.company_id.export_custom_sale_order_lastmodifieddate)])
+            for order in orders:
+                try:
+                    if order.state in ['sale', 'done', 'cancel', 'draft', 'sent']:
+                        order.exportCustomSaleOrder_to_sf()
+                except Exception as e:
+                    _logger.error('Oops Some error in  exporting custom orders to SALESFORCE %s', e)
 
     def exportCustomSaleOrder_to_sf(self):
         # print("\nIn exportCustomSaleOrder_to_sf Method")
@@ -121,6 +124,7 @@ class SaleOrderCust(models.Model):
             if self.x_studio_sample_order_type:
                 order_dict['Sample_Order_Type__c'] = self.x_studio_sample_order_type
 
+            # print("\nself.x_studio_type_of_order.value: ",self.x_studio_type_of_order.value)
             if self.x_studio_type_of_order:
                 order_dict['Type_of_Order__c'] = self.x_studio_type_of_order
             if self.commitment_date:
@@ -129,10 +133,66 @@ class SaleOrderCust(models.Model):
                 order_dict['Letter_Contents__c'] = self.x_studio_letter_content_1
             if self.x_studio_text_field_JLki5:
                 order_dict['Notes__c'] = self.x_studio_text_field_JLki5
-            for line in self.order_line:
-                if line.product_id.type == 'service':
-                    order_dict['Shipping_Price__c'] = line.price_unit
-                    break
+            # for line in self.order_line:
+            #     if line.product_id.type == 'service':
+            #         order_dict['Shipping_Price__c'] = line.price_unit
+            #         break
+
+            if self.x_studio_shipping_type:
+                order_dict['Shipping_Type__c'] = self.x_studio_shipping_type
+            if self.x_studio_order_shipped:
+                order_dict['Order_Shipped__c'] = self.x_studio_order_shipped
+            else:
+                order_dict['Order_Shipped__c'] = False
+
+            # confirmation Stages
+            if self.x_studio_waiting_on_payment:
+                order_dict['Waiting_on_Payment__c'] = self.x_studio_waiting_on_payment
+            else:
+                order_dict['Waiting_on_Payment__c'] = False
+            if self.x_studio_boolean_field_Xq8sT:
+                order_dict['Waiting_on_Logos_Artwork__c'] = self.x_studio_boolean_field_Xq8sT
+            else:
+                order_dict['Waiting_on_Logos_Artwork__c'] = False
+            if self.x_studio_boolean_field_cT9Rd:
+                order_dict['Waiting_on_Logos_Artwork_From_Customer__c'] = self.x_studio_boolean_field_cT9Rd
+            else:
+                order_dict['Waiting_on_Logos_Artwork_From_Customer__c'] = False
+            if self.x_studio_boolean_field_C76iG:
+                order_dict['Waiting_on_Client_Approval__c'] = self.x_studio_boolean_field_C76iG
+            else:
+                order_dict['Waiting_on_Client_Approval__c'] = False
+            if self.x_studio_boolean_field_oJ1F3:
+                order_dict['Waiting_on_Drop_Ship_List_Shipping_info__c'] = self.x_studio_boolean_field_oJ1F3
+            else:
+                order_dict['Waiting_on_Drop_Ship_List_Shipping_info__c'] = False
+            if self.x_studio_waiting_on_letter_from_customer:
+                order_dict['Waiting_on_Letter_from_Customer__c'] = self.x_studio_waiting_on_letter_from_customer
+            else:
+                order_dict['Waiting_on_Letter_from_Customer__c'] = False
+            # Fulfillment Stages
+            if self.x_studio_waiting_on_ordered_product:
+                order_dict['Waiting_on_Ordered_Product__c'] = self.x_studio_waiting_on_ordered_product
+            else:
+                order_dict['Waiting_on_Ordered_Product__c'] = False
+            if self.x_studio_waiting_on_customer_provided_product:
+                order_dict['Waiting_on_Customer_provided_Product__c'] = self.x_studio_waiting_on_customer_provided_product
+            else:
+                order_dict['Waiting_on_Customer_provided_Product__c'] = False
+            if self.x_studio_in_kitting:
+                order_dict['In_Kitting__c'] = self.x_studio_in_kitting
+            else:
+                order_dict['In_Kitting__c'] = False
+            if self.x_studio_waiting_on_shipment_approval_need_images:
+                order_dict['Waiting_on_Shipment_Approval_Need_image__c'] = self.x_studio_waiting_on_shipment_approval_need_images
+            else:
+                order_dict['Waiting_on_Shipment_Approval_Need_image__c'] = False
+            if self.x_studio_can_ship_early:
+                order_dict['Can_Ship_Early__c'] = self.x_studio_can_ship_early
+            else:
+                order_dict['Can_Ship_Early__c'] = False
+            if self.carrier_id:
+                order_dict['Shipping_Urgency__c'] = self.carrier_id.name
 
             ''' Create a entry in pricebook in salesforce'''
             result_so = self.sendCustomOrderDataToSf(order_dict)
@@ -157,7 +217,6 @@ class SaleOrderCust(models.Model):
             headers['Accept'] = 'application/json'
 
             endpoint = '/services/data/v40.0/sobjects/Order__c'
-
             if self.custom_so_salesforce_id:
                 # print("\nOrder__c In if self.custom_so_salesforce_id ")
                 ''' Try Updating it if already exported '''
@@ -171,9 +230,9 @@ class SaleOrderCust(models.Model):
 
                 res = requests.request('PATCH', sf_config.sf_url + endpoint + '/' + self.custom_so_salesforce_id,
                                        headers=headers, data=payload)
-                # print("\nUpdate res.text: ", res.text, "\nUpdate res.status_code: ", res.status_code)
                 if res.status_code in [200, 201, 204]:
                     self.custom_so_is_updated = True
+                    self.env.user.company_id.export_custom_sale_order_lastmodifieddate = datetime.today()
                     return self.custom_so_salesforce_id
                 else:
 
@@ -186,12 +245,12 @@ class SaleOrderCust(models.Model):
                 payload = json.dumps(order_dict)
 
                 res = requests.request('POST', sf_config.sf_url + endpoint, headers=headers, data=payload)
-
                 if res.status_code in [200, 201, 204]:
                     parsed_resp = json.loads(str(res.text))
                     # print("\nOrder__c Create parsed_resp: ", parsed_resp)
                     self.custom_so_salesforce_exported = True
                     self.custom_so_salesforce_id = parsed_resp.get('id')
+                    self.env.user.company_id.export_custom_sale_order_lastmodifieddate = datetime.today()
                     return parsed_resp.get('id')
                 else:
                     log_message = self.env['sf.logging'].create_log_message(self,
@@ -250,7 +309,7 @@ class SaleOrderCust(models.Model):
                 line_sf_id = ''
                 i = i + 1
                 if line.custom_soline_salesforce_id or line.sale_order_line_updated:
-                    if line.product_id and line.product_id.x_salesforce_id and line.product_id.type != 'service':
+                    if line.product_id and line.product_id.x_salesforce_id:
                         line.sale_order_line_updated = False
                         sf_config = self.env.user.company_id
                         endpoint = None
@@ -295,7 +354,7 @@ class SaleOrderCust(models.Model):
                                                     })
 
 
-                    elif line.product_id and not line.product_id.x_salesforce_id and line.product_id.type != 'service':
+                    elif line.product_id and not line.product_id.x_salesforce_id:
                         line.sale_order_line_updated = False
                         line.product_id.exportProduct_to_sf()
                         sf_config = self.env.user.company_id
@@ -349,7 +408,7 @@ class SaleOrderCust(models.Model):
                     line_id = line.id
 
                 else:
-                    if line.product_id and line.product_id.x_salesforce_id and line.product_id.type != 'service':
+                    if line.product_id and line.product_id.x_salesforce_id:
                         # order_item_dict.update({'Product__c': line.product_id.x_salesforce_id,
                         #                         'Quantity__c': line.product_uom_qty, 'Price__c': line.price_unit,
                         #                         'Customization_Details__c': line.x_studio_customization_detail,
@@ -397,7 +456,7 @@ class SaleOrderCust(models.Model):
                                                     'Customization_Details__c': line.x_studio_customization_detail,
                                                     'Item_Notes__c': line.x_studio_customization_notes,
                                                     })
-                    elif line.product_id and not line.product_id.x_salesforce_id and line.product_id.type != 'service':
+                    elif line.product_id and not line.product_id.x_salesforce_id:
                         line.product_id.exportProduct_to_sf()
                         sf_config = self.env.user.company_id
                         endpoint = None

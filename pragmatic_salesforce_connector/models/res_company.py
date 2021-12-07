@@ -60,6 +60,19 @@ class ResCompany(models.Model):
     # x_quickbooks_last_paymentterm_sync = fields.Datetime('Last Synced On', default=fields.Datetime.now())
     # x_quickbooks_last_paymentterm_imported_id = fields.Integer('Last Imported ID')
 
+    # Export last Modified Date
+    export_account_lastmodifieddate = fields.Datetime("Account Last Modified Time ", default=_default_update_datetime)
+    export_contact_lastmodifieddate = fields.Datetime("Contact Last Modified Time ", default=_default_update_datetime)
+    export_product_lastmodifieddate = fields.Datetime("Product Last Modified Time ", default=_default_update_datetime)
+    export_product_template_lastmodifieddate = fields.Datetime("Product Template Last Modified Time ", default=_default_update_datetime)
+    export_quote_lastmodifieddate = fields.Datetime("Quotation Last Modified Time ", default=_default_update_datetime)
+    export_custom_sale_order_lastmodifieddate = fields.Datetime("Custom Sale Order Last Modified Time ", default=_default_update_datetime)
+    export_lead_lastmodifieddate = fields.Datetime("Lead Last Modified Time ", default=_default_update_datetime)
+    export_opportunity_lastmodifieddate = fields.Datetime("Opportunity Last Modified Time ", default=_default_update_datetime)
+    export_contract_lastmodifieddate = fields.Datetime("Contract Last Modified Time ", default=_default_update_datetime)
+    export_event_lastmodifieddate = fields.Datetime("Event Last Modified Time ", default=_default_update_datetime)
+    export_task_lastmodifieddate = fields.Datetime("Task Last Modified Time ", default=_default_update_datetime)
+
     # @api.multi
     def sanitize_sf_data(self, field_to_sanitize):
         '''

@@ -347,6 +347,10 @@ class ResPartnerCustomization(models.Model):
                 self.x_salesforce_id = parsed_result.get('id')
                 self._cr.commit()
                 _logger.info("Updated companies in salesforce")
+                if self.is_company:
+                    self.env.user.company_id.export_account_lastmodifieddate = datetime.today()
+                else:
+                    self.env.user.company_id.export_contact_lastmodifieddate = datetime.today()
                 return parsed_result.get('id')
             else:
                 return False
@@ -375,6 +379,10 @@ class ResPartnerCustomization(models.Model):
         if result.status_code in [204]:
             self.x_is_updated = True
             self.x_last_modified_on = datetime.now()
+            if self.is_company:
+                self.env.user.company_id.export_account_lastmodifieddate = datetime.today()
+            else:
+                self.env.user.company_id.export_contact_lastmodifieddate = datetime.today()
             _logger.info("Exported companies in salesforce")
             return True
         elif result.status_code == 401:
@@ -448,29 +456,33 @@ class ResPartnerCustomization(models.Model):
 
     @api.model
     def _scheduler_export_companies_to_sf(self):
-        companies = self.search([('x_is_updated', '=', False), ('id', 'not in', [1, 2, 3]), ('is_company', '=', True)])
-        for company in companies:
-            try:
-                sf_company_dict = company.create_company_sf_dict()
-                if company.x_salesforce_id:
-                    company.update_partner_in_sf(sf_company_dict)
-                else:
-                    company.create_partner_in_sf(sf_company_dict)
-            except Exception as e:
-                _logger.error('Oops Some error in  creating/updating partner in SALESFORCE %s', e)
+        company_id = self.env.user.company_id
+        if company_id:
+            companies = self.search([('x_is_updated', '=', False), ('id', 'not in', [1, 2, 3]), ('is_company', '=', True), ('write_date', '>', company_id.export_account_lastmodifieddate)])
+            for company in companies:
+                try:
+                    sf_company_dict = company.create_company_sf_dict()
+                    if company.x_salesforce_id:
+                        company.update_partner_in_sf(sf_company_dict)
+                    else:
+                        company.create_partner_in_sf(sf_company_dict)
+                except Exception as e:
+                    _logger.error('Oops Some error in  creating/updating partner in SALESFORCE %s', e)
 
     @api.model
     def _scheduler_export_contacts_to_sf(self):
-        contacts = self.search([('x_is_updated', '=', False), ('id', 'not in', [1, 2, 3]), ('is_company', '=', False), ('type', '=', 'contact')])
-        for contact in contacts:
-            try:
-                sf_company_dict = contact.create_contact_sf_dict()
-                if contact.x_salesforce_id:
-                    contact.update_partner_in_sf(sf_company_dict)
-                else:
-                    contact.create_partner_in_sf(sf_company_dict)
-            except Exception as e:
-                _logger.error('Oops Some error in  creating/updating partner in SALESFORCE %s', e)
+        company_id = self.env.user.company_id
+        if company_id:
+            contacts = self.search([('x_is_updated', '=', False), ('id', 'not in', [1, 2, 3]), ('is_company', '=', False), ('type', '=', 'contact'), ('write_date', '>', company_id.export_contact_lastmodifieddate)])
+            for contact in contacts:
+                try:
+                    sf_company_dict = contact.create_contact_sf_dict()
+                    if contact.x_salesforce_id:
+                        contact.update_partner_in_sf(sf_company_dict)
+                    else:
+                        contact.create_partner_in_sf(sf_company_dict)
+                except Exception as e:
+                    _logger.error('Oops Some error in  creating/updating partner in SALESFORCE %s', e)
 
     @api.model
     def exportPartner_to_sf(self):

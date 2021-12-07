@@ -1,9 +1,9 @@
 import json
 import requests
+from datetime import datetime, timedelta
 from odoo import fields, api, models, _
 from odoo.exceptions import UserError
 import logging
-
 _logger = logging.getLogger(__name__)
 
 
@@ -125,6 +125,9 @@ class ProductTemplateCust(models.Model):
                                                    data=payload)
                             if res.status_code == 204:
                                 _logger.info("SKU wise updated product sucessfully")
+                                self.env.user.company_id.export_product_template_lastmodifieddate = datetime.today()
+
+
                         else:
                             pass
 
@@ -154,6 +157,8 @@ class ProductTemplateCust(models.Model):
                                                        data=payload)
                                 if res.status_code == 204:
                                     _logger.info("Name wise updated product sucessfully")
+                                    self.env.user.company_id.export_product_template_lastmodifieddate = datetime.today()
+
                             else:
                                 pass
                     else:
@@ -170,6 +175,8 @@ class ProductTemplateCust(models.Model):
                                 for product in prod_temp.product_variant_ids:
                                     product.x_salesforce_id = self.x_salesforce_id
                                     product.x_salesforce_exported = True
+                                    self.env.user.company_id.export_product_template_lastmodifieddate = datetime.today()
+
 
 
 
@@ -198,6 +205,8 @@ class ProductTemplateCust(models.Model):
                                                    data=payload)
                             if res.status_code == 204:
                                 _logger.info("Name wise updated product sucessfully")
+                                self.env.user.company_id.export_product_template_lastmodifieddate = datetime.today()
+
                         else:
                             pass
                 else:
@@ -214,6 +223,8 @@ class ProductTemplateCust(models.Model):
                             for product in prod_temp.product_variant_ids:
                                 product.x_salesforce_id = self.x_salesforce_id
                                 product.x_salesforce_exported = True
+                                self.env.user.company_id.export_product_template_lastmodifieddate = datetime.today()
+
 
             elif self.x_salesforce_id:
                 _logger.info("In elif x_salesforce_id exists")
@@ -225,6 +236,7 @@ class ProductTemplateCust(models.Model):
                                        data=payload)
                 if res.status_code == 204:
                     _logger.info("Updated product sucessfully")
+                    self.env.user.company_id.export_product_template_lastmodifieddate = datetime.today()
 
     def exportProduct_Template_to_sf(self):
         if len(self) > 1:
@@ -290,9 +302,11 @@ class ProductTemplateCust(models.Model):
 
     @api.model
     def _scheduler_export_products_temp_to_sf(self):
-        products = self.search([])
-        for product in products:
-            try:
-                product.exportProduct_Template_to_sf()
-            except Exception as e:
-                _logger.error('Oops Some error in  exporting products to SALESFORCE %s', e)
+        company_id = self.env.user.company_id
+        if company_id:
+            products = self.search([('write_date', '>', company_id.export_product_template_lastmodifieddate)])
+            for product in products:
+                try:
+                    product.exportProduct_Template_to_sf()
+                except Exception as e:
+                    _logger.error('Oops Some error in  exporting products to SALESFORCE %s', e)

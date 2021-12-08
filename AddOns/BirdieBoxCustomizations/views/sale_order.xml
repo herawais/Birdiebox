@@ -1,21 +1,21 @@
 <odoo>
-  <record model="ir.ui.view" id="view_sale_order_form_customization">
-    <field name="name">Sale Order Form Customization</field>
-    <field name="model">sale.order</field>
-    <field name="inherit_id" ref="sale.view_order_form"/>
-    <field name="arch" type="xml">
-        <xpath expr="//button[@name='action_confirm']" position="replace">
-            <button name="action_confirm" id="action_confirm"
-                        string="Confirm" class="btn-primary" type="object"
-                        attrs="{'invisible': ['|', ('state', 'not in', ['sent']),('x_studio_shipping_type', 'in',  ['Individual', 'Bulk Freight and Individual', 'Bulk Ground and Individual'])]}"/>
-            <button name="action_confirm"
-                string="Confirm" type="object"
-                attrs="{'invisible': ['|', ('state', 'not in', ['draft']), ('x_studio_shipping_type', 'in',  ['Individual', 'Bulk Freight and Individual', 'Bulk Ground and Individual'])]}"/>
-            <field name="x_studio_shipping_type" invisible="1" />
-            <button name="custom_action_done"
-                string="Confirm" type="object"
-                attrs="{'invisible': ['|', ('state', 'not in', ['draft']), ('x_studio_shipping_type', 'not in', ['Individual', 'Bulk Freight and Individual', 'Bulk Ground and Individual'])]}"/>
-        </xpath>
-    </field>
-  </record>   
+    <record id="view_order_sale_order_line_custom" model="ir.ui.view">
+        <field name="name">sale.order.line.tree.custom</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="model">sale.order</field>
+        <field name="arch" type="xml">
+              <xpath expr="//form[1]/sheet[1]/notebook[1]/page[@name='order_lines']/field[@name='order_line']/tree[1]/field[@name='name']" position="after">
+                <field name="x_auto_add_to_child" />
+            </xpath>
+        </field>
+    </record>
+
+    <record id="model_sale_order_action_quotation_cancel" model="ir.actions.server">
+        <field name="name">Cancel Quotations</field>
+        <field name="model_id" ref="sale.model_sale_order"/>
+        <field name="binding_model_id" ref="sale.model_sale_order"/>
+        <field name="binding_view_types">form,list</field>
+        <field name="state">code</field>
+        <field name="code">action = records.action_cancel_bulk()</field>
+    </record>
 </odoo>

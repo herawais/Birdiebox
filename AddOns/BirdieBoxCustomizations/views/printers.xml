@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record model="ir.ui.view" id="view_printer_form">
+      <field name="name">printer.form</field>
+      <field name="model">res.printer.settings</field>
+      <field name="arch" type="xml">
+        <form delete="false" duplicate="false" create="false">
+          <sheet>
+            <div class="oe_button_box" name="button_box">
+              <button name="action_refresh_printers" string="Refresh Printers" type="object" class="oe_stat_button" icon="fa-refresh"/>
+            </div>
+            <group>
+              <h1>
+                <field name="name" attrs="{'readonly' : True}"/>
+              </h1>
+            </group>
+            <notebook>
+              <page string="Available Printers">
+                <group>
+                  <field name="printer_service_base_url"/>
+                  <field name="printer_service_jwt_secret" password="1"/>
+                </group>
+                <field name="printer_ids">
+                  <tree create="false" delete="false" editable="false">
+                    <field name="name" />
+                    <field name="type" />
+                  </tree>
+                </field>
+              </page>
+            </notebook>
+          </sheet>
+        </form>
+      </field>
+    </record>
+
+
+    <record model="ir.ui.view" id="print_settings_list">
+      <field name="name">Printer Settings List</field>
+      <field name="model">res.printer.settings</field>
+      <field name="arch" type="xml">
+        <tree>
+          <field name="name"/>
+          <field name="printer_service_base_url"/>
+        </tree>
+      </field>
+    </record>
+
+    <record model="ir.actions.act_window" id="printer_settings_window">
+        <field name="name">Printer Settings</field>
+        <field name="res_model">res.printer.settings</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <menuitem name="Printer Settings" id="printers_config_menu"  parent="base.menu_administration" action="BirdieBoxCustomizations.printer_settings_window"/>
+    
+
+</odoo>

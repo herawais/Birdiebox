@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    
+    <record model="ir.ui.view" id="view_shopify_shop_form">
+        <field name="name">Shopify Shop</field>
+        <field name="model">shopify.shop</field>
+        <field name="arch" type="xml">
+        <form string="Shopify Shops">
+            <sheet>
+                <div class="oe_button_box" name="button_box">
+                    <field name="connected" invisible="1" />
+                    <button name="shopify_connect" string="Not Connected" type="object" class="oe_stat_button text-danger" icon="fa-refresh"  attrs="{'invisible': [('connected', '=', True)]}"/>
+                    <button name="shopify_connect" string="Connected" type="object" class="oe_stat_button text-success" icon="fa-refresh" attrs="{'invisible': [('connected', '=', False)]}" confirm="Are you sure you want to disconnect from Shopify?" />
+                </div>
+                <div class="oe_title">
+                    <label class="oe_edit_only" for="name"/>
+                    <h1><field name="name" placeholder="e.g. Shopify Test Store" required="True"/></h1>
+                </div>
+                <group>
+                    <group>
+                        <label for="shop_id" class="o_form_label">Shop URL: </label>  
+                        <span class="oe_inline">https://<field class="oe_inline" nolabel="1" name="shop_id" string="Shop URL" required="True" placeholder="  shopifyteststore" />.myshopify.com/</span>
+                    </group>
+                    <group>
+                        <field name="parent_sales_order" /> 
+                    </group>
+                    <group>
+                        <field name="api_key" />
+                        <field name="secret" string="API Password" /> 
+                        <field name="shared_secret" /> 
+                    </group>
+                </group>
+
+                <notebook>
+                    <page string="Bulk Configuration">
+                        <group>
+                            <field name="coupons" widget="one2many" nolabel="1" style="width: 100%;">
+                                <tree string="Coupons" editable="top">
+                                    <field name="code_prefix"   />
+                                    <field name="partner_id" />
+                                </tree>
+                            </field>
+                        </group>
+                    </page>
+                </notebook>
+            </sheet>
+        </form>
+        </field>
+    </record>
+
+     <record model="ir.ui.view" id="view_shopify_logs_form">
+        <field name="name">Shopify Logs</field>
+        <field name="model">shopify.log</field>
+        <field name="arch" type="xml">
+        <form string="Shopify Logs" create="false" edit="false">
+          <sheet>
+            <group>
+                <div class="oe_title">
+                    <label class="oe_edit_only" for="order_id"/>
+                    <h1><field name="order_id" readonly="1"/></h1>
+                </div>
+                </group>
+                <group>
+                    <field string="Import Date" name="create_date" />
+                    <field name="shop" />
+                    <field name="error" readonly="1"/>
+                </group>
+                <group>
+                    <button class="oe_highlight" string="Retry Import" type="object" name="repull_order"/>
+                </group>
+            </sheet>
+        </form>
+        </field>
+    </record>
+
+
+   
+    <record model="ir.actions.act_window" id="shopify_shop_main_form">
+        <field name="name">Shopify Shops</field>
+        <field name="res_model">shopify.shop</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <record model="ir.ui.view" id="shopify_shop_main_list">
+        <field name="name">Shopify Shops</field>
+        <field name="model">shopify.shop</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="shop_id" invisible="1" />
+                <field name="name" />
+                <field name="shop_url" />
+                <field name="connected" readonly="1" widget="toggle_button" />
+            </tree>
+        </field>
+    </record>
+
+
+    <record model="ir.actions.act_window" id="shopify_log_form">
+        <field name="name">Shopify Logs</field>
+        <field name="res_model">shopify.log</field>
+        <field name="view_mode">tree,form</field>
+    </record>
+
+    <record model="ir.ui.view" id="shopify_log_list">
+        <field name="name">Shopify Logs</field>
+        <field name="model">shopify.log</field>
+        <field name="arch" type="xml">
+            <tree
+                default_order="create_date desc"
+                decoration-danger="success==False" 
+                decoration-success="success==True"
+            >
+                <field name="shop" />
+                <field name="order_id" />
+                <field string="Import Date" name="create_date" />
+                <field name="error" />
+                <field name="success" invisible="1"/>
+            </tree>
+        </field>
+    </record>
+
+
+    
+
+
+
+    <menuitem id="shopify_config_main" name="Shopify" parent="sale.menu_sale_config" sequence="56" />
+    <menuitem id="shopify_shop_main_form_menu" name="All Shops" parent="BirdieBoxCustomizations.shopify_config_main" action="BirdieBoxCustomizations.shopify_shop_main_form" sequence="1"/>
+    <menuitem id="shopify_logs_menu" name="Logs" parent="BirdieBoxCustomizations.shopify_config_main" action="BirdieBoxCustomizations.shopify_log_form" sequence="2"/>
+
+
+
+</odoo>

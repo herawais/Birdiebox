@@ -22,12 +22,12 @@
           Creating Bulk Sales orders for <field name="parent_sale_order_id" nolabel="1" readonly="1"/>.
         </p>
 
-        <div class="alert alert-danger" attrs="{'invisible': ['|', ('unique_entered_sales_orders', '&lt;', 2),('unique_found_sales_orders', '=', 0)]}">
+        <div class="alert alert-danger" role="alert" attrs="{'invisible': ['|', ('unique_entered_sales_orders', '&lt;', 2),('unique_found_sales_orders', '=', 0)]}">
             <b>Found Multiple Sales Orders</b><br/><br/>
             
             <span>Please Cancel and Select only the same Parent Sale Orders</span>
         </div>
-        <div class="alert alert-danger" attrs="{'invisible': [('unique_found_sales_orders', '!=', 0)]}">
+        <div class="alert alert-danger"  role="alert" attrs="{'invisible': [('unique_found_sales_orders', '!=', 0)]}">
             <b>Could not find any matching Parent Sale Orders</b>
         </div>
         <group attrs="{'invisible': ['|', ('unique_entered_sales_orders', '!=', 1),('unique_found_sales_orders', '!=', 1)]}" style="width: 100%;">

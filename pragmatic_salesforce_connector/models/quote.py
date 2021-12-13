@@ -2,6 +2,9 @@ from odoo import fields, models,api, _
 from odoo.exceptions import UserError
 import json
 import requests
+import logging
+from datetime import datetime, timedelta
+_logger = logging.getLogger(__name__)
 
 
 class SaleOrderCust(models.Model):
@@ -33,6 +36,7 @@ class SaleOrderCust(models.Model):
                 res = requests.request('PATCH', sf_config.sf_url + endpoint + '/' + self.x_salesforce_id, headers=headers, data=payload)
                 if res.status_code == 204:
                     self.x_is_updated = True
+                    self.env.user.company_id.export_quote_lastmodifieddate = datetime.today()
                     return self.x_salesforce_id
 
             else:
@@ -41,6 +45,7 @@ class SaleOrderCust(models.Model):
                     parsed_resp = json.loads(str(res.text))
                     self.x_salesforce_exported = True
                     self.x_salesforce_id = parsed_resp.get('id')
+                    self.env.user.company_id.export_quote_lastmodifieddate = datetime.today()
                     return parsed_resp.get('id')
                 else:
                     return False
@@ -87,8 +92,8 @@ class SaleOrderCust(models.Model):
     def exportQuotations_to_sf(self):
         if len(self) > 1:
             raise UserError(_("Please Select 1 record to Export"))
-        if not self.contract_id:
-            raise UserError(_("Please add contract"))
+        # if not self.contract_id:
+        #     raise UserError(_("Please add contract"))
         if not self.opportunity_id:
             raise UserError(_("Please add Opportunity"))
         else:
@@ -192,12 +197,14 @@ class SaleOrderCust(models.Model):
 
     @api.model
     def _scheduler_export_quotes_to_sf(self):
-        quotes = self.search([])
-        for quote in quotes:
-            try:
-                quote.exportQuotations_to_sf()
-            except Exception as e:
-                _logger.error('Oops Some error in  exporting quotes to SALESFORCE %s', e)
+        company_id = self.env.user.company_id
+        if company_id:
+            quotes = self.search([('write_date', '>', company_id.export_quote_lastmodifieddate)])
+            for quote in quotes:
+                try:
+                    quote.exportQuotations_to_sf()
+                except Exception as e:
+                    _logger.error('Oops Some error in  exporting quotes to SALESFORCE %s', e)
 
 
 

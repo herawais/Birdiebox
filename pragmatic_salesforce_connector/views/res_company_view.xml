@@ -38,86 +38,160 @@
 						<field name="sf_access_token"/>
 					</group>
 					<separator name='sync' string='Initial Sync'/>
-					<group>
 
-						<button string="1 Import Accounts" type="object" name="import_sf_accounts" class="oe_highlight" icon="fa-arrow-circle-down"/>
-						<div>
-							<label for="account_lastmodifieddate"/>
-							<field name="account_lastmodifieddate" required="1"/>
-						</div>
-					</group>
+					<notebook>
+						<page name="sf_import_sync" string='Import'>
+							<group>
 
-					<group>
-						<button string="2 Import Contacts" type="object" name="import_sf_contacts" class="oe_highlight" icon="fa-arrow-circle-down"/>
-						<div>
-							<label for="contact_lastmodifieddate"/>
-							<field name="contact_lastmodifieddate" required="1"/>
-						</div>
-					</group>
+								<button string="1 Import Accounts" type="object" name="import_sf_accounts" class="oe_highlight" icon="fa-arrow-circle-down"/>
+								<div>
+									<label for="account_lastmodifieddate"/>
+									<field name="account_lastmodifieddate" required="1"/>
+								</div>
+							</group>
 
-					<group>
-						<button string="3 Import Products" type="object" name="import_sf_products" class="oe_highlight" icon="fa-arrow-circle-down"/>
-						<div>
-							<label for="product_lastmodifieddate"/>
-							<field name="product_lastmodifieddate" required="1"/>
-						</div>
-					</group>
+							<group>
+								<button string="2 Import Contacts" type="object" name="import_sf_contacts" class="oe_highlight" icon="fa-arrow-circle-down"/>
+								<div>
+									<label for="contact_lastmodifieddate"/>
+									<field name="contact_lastmodifieddate" required="1"/>
+								</div>
+							</group>
 
-					<group>
-						<button string="4 Import Quotations" type="object" name="import_sf_quote" class="oe_highlight" icon="fa-arrow-circle-down"/>
-						<div>
-							<label for="quote_lastmodifieddate"/>
-							<field name="quote_lastmodifieddate" required="1"/>
-						</div>
-					</group>
+							<group>
+								<button string="3 Import Products" type="object" name="import_sf_products" class="oe_highlight" icon="fa-arrow-circle-down"/>
+								<div>
+									<label for="product_lastmodifieddate"/>
+									<field name="product_lastmodifieddate" required="1"/>
+								</div>
+							</group>
 
-					<group>
-						<button string="5 Import Sales Orders" type="object" name="import_sf_so" class="oe_highlight" icon="fa-arrow-circle-down"/>
-						<div>
-							<label for="order_lastmodifieddate"/>
-							<field name="order_lastmodifieddate" required="1"/>
-						</div>
-					</group>
+							<group>
+								<button string="4 Import Quotations" type="object" name="import_sf_quote" class="oe_highlight" icon="fa-arrow-circle-down"/>
+								<div>
+									<label for="quote_lastmodifieddate"/>
+									<field name="quote_lastmodifieddate" required="1"/>
+								</div>
+							</group>
 
-					<group>
-						<button string="6 Import Leads" type="object" name="import_sf_lead" class="oe_highlight" icon="fa-arrow-circle-down"/>
-						<div>
-							<label for="lead_lastmodifieddate"/>
-							<field name="lead_lastmodifieddate" required="1"/>
-						</div>
-					</group>
+							<group>
+								<button string="5 Import Sales Orders" type="object" name="import_sf_so" class="oe_highlight" icon="fa-arrow-circle-down"/>
+								<div>
+									<label for="order_lastmodifieddate"/>
+									<field name="order_lastmodifieddate" required="1"/>
+								</div>
+							</group>
 
-					<group>
-						<button string="7 Import Opportunity" type="object" name="import_sf_opportunity" class="oe_highlight" icon="fa-arrow-circle-down"/>
-						<div>
-							<label for="opportunity_lastmodifieddate"/>
-							<field name="opportunity_lastmodifieddate" required="1"/>
-						</div>
-					</group>
+							<group>
+								<button string="6 Import Leads" type="object" name="import_sf_lead" class="oe_highlight" icon="fa-arrow-circle-down"/>
+								<div>
+									<label for="lead_lastmodifieddate"/>
+									<field name="lead_lastmodifieddate" required="1"/>
+								</div>
+							</group>
 
-					<group>
-						<button string="8 Import Contract" type="object" name="import_sf_contract" class="oe_highlight" icon="fa-arrow-circle-down"/>
-						<div>
-							<label for="contract_lastmodifieddate"/>
-							<field name="contract_lastmodifieddate" required="1"/>
-						</div>
-					</group>
+							<group>
+								<button string="7 Import Opportunity" type="object" name="import_sf_opportunity" class="oe_highlight" icon="fa-arrow-circle-down"/>
+								<div>
+									<label for="opportunity_lastmodifieddate"/>
+									<field name="opportunity_lastmodifieddate" required="1"/>
+								</div>
+							</group>
 
-					<group>
-						<button string="9 Import Events" type="object" name="import_sf_event" class="oe_highlight" icon="fa-arrow-circle-down"/>
-						<div>
-							<label for="event_lastmodifieddate"/>
-							<field name="event_lastmodifieddate" required="1"/>
-						</div>
-					</group>
+							<group>
+								<button string="8 Import Contract" type="object" name="import_sf_contract" class="oe_highlight" icon="fa-arrow-circle-down"/>
+								<div>
+									<label for="contract_lastmodifieddate"/>
+									<field name="contract_lastmodifieddate" required="1"/>
+								</div>
+							</group>
 
-					<group>
-						<button string="10 Import Tasks" type="object" name="import_sf_activity" class="oe_highlight" icon="fa-arrow-circle-down"/>
-						<div>
-							<label for="task_lastmodifieddate"/>
-							<field name="task_lastmodifieddate" required="1"/>
-						</div>
-					</group>
+							<group>
+								<button string="9 Import Events" type="object" name="import_sf_event" class="oe_highlight" icon="fa-arrow-circle-down"/>
+								<div>
+									<label for="event_lastmodifieddate"/>
+									<field name="event_lastmodifieddate" required="1"/>
+								</div>
+							</group>
+
+							<group>
+								<button string="10 Import Tasks" type="object" name="import_sf_activity" class="oe_highlight" icon="fa-arrow-circle-down"/>
+								<div>
+									<label for="task_lastmodifieddate"/>
+									<field name="task_lastmodifieddate" required="1"/>
+								</div>
+							</group>
+						</page>
+
+						<page name="sf_export_sync" string='Export'>
+							<group>
+								<div>
+									<label for="export_account_lastmodifieddate"/>
+									<field name="export_account_lastmodifieddate" required="1"/>
+								</div>
+							</group>
+							<group>
+								<div>
+									<label for="export_contact_lastmodifieddate"/>
+									<field name="export_contact_lastmodifieddate" required="1"/>
+								</div>
+							</group>
+							<group>
+								<div>
+									<label for="export_product_lastmodifieddate"/>
+									<field name="export_product_lastmodifieddate" required="1"/>
+								</div>
+							</group>
+							<group>
+								<div>
+									<label for="export_product_template_lastmodifieddate"/>
+									<field name="export_product_template_lastmodifieddate" required="1"/>
+								</div>
+							</group>
+							<group>
+								<div>
+									<label for="export_quote_lastmodifieddate"/>
+									<field name="export_quote_lastmodifieddate" required="1"/>
+								</div>
+							</group>
+							<group>
+								<div>
+									<label for="export_custom_sale_order_lastmodifieddate"/>
+									<field name="export_custom_sale_order_lastmodifieddate" required="1"/>
+								</div>
+							</group>
+							<group>
+								<div>
+									<label for="export_lead_lastmodifieddate"/>
+									<field name="export_lead_lastmodifieddate" required="1"/>
+								</div>
+							</group>
+							<group>
+								<div>
+									<label for="export_opportunity_lastmodifieddate"/>
+									<field name="export_opportunity_lastmodifieddate" required="1"/>
+								</div>
+							</group>
+							<group>
+								<div>
+									<label for="export_contract_lastmodifieddate"/>
+									<field name="export_contract_lastmodifieddate" required="1"/>
+								</div>
+							</group>
+							<group>
+								<div>
+									<label for="export_event_lastmodifieddate"/>
+									<field name="export_event_lastmodifieddate" required="1"/>
+								</div>
+							</group>
+							<group>
+								<div>
+									<label for="export_task_lastmodifieddate"/>
+									<field name="export_task_lastmodifieddate" required="1"/>
+								</div>
+							</group>
+						</page>
+					</notebook>
 
 				</page>
 			</xpath>

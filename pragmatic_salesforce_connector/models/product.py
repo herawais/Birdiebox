@@ -1,7 +1,7 @@
 import json
 import logging
-
 import requests
+from datetime import datetime, timedelta
 from odoo import fields, api, models, _
 from odoo.exceptions import UserError
 
@@ -127,12 +127,15 @@ class ProductTemplateCust(models.Model):
                         if res.status_code in [200, 201]:
                             resp = json.loads(str(res.text))
                             self.x_salesforce_pbe = resp.get('id')
+                            self.env.user.company_id.export_product_lastmodifieddate = datetime.today()
 
     @api.model
     def _scheduler_export_products_to_sf(self):
-        products = self.search([])
-        for product in products:
-            try:
-                product.exportProduct_to_sf()
-            except Exception as e:
-                _logger.error('Oops Some error in  exporting products to SALESFORCE %s', e)
+        company_id = self.env.user.company_id
+        if company_id:
+            products = self.search([('write_date', '>', company_id.export_product_lastmodifieddate)])
+            for product in products:
+                try:
+                    product.exportProduct_to_sf()
+                except Exception as e:
+                    _logger.error('Oops Some error in  exporting products to SALESFORCE %s', e)

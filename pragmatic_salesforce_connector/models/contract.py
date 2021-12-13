@@ -3,6 +3,7 @@ import logging
 
 import requests
 from odoo import fields, api, models, _
+from datetime import datetime, timedelta
 from odoo.exceptions import UserError
 
 _logger = logging.getLogger(__name__)
@@ -44,6 +45,8 @@ class SFContract(models.Model):
                 res = requests.request('PATCH', sf_config.sf_url + endpoint + '/' + self.x_salesforce_id, headers=headers, data=payload)
                 if res.status_code == 204:
                     self.x_is_updated = True
+                    self.env.user.company_id.export_contract_lastmodifieddate = datetime.today()
+
 
             else:
                 res = requests.request('POST', sf_config.sf_url + endpoint, headers=headers, data=payload)
@@ -51,6 +54,7 @@ class SFContract(models.Model):
                     parsed_resp = json.loads(str(res.text))
                     self.x_salesforce_exported = True
                     self.x_salesforce_id = parsed_resp.get('id')
+                    self.env.user.company_id.export_contract_lastmodifieddate = datetime.today()
                     return parsed_resp.get('id')
                 else:
                     return False
@@ -70,15 +74,22 @@ class SFContract(models.Model):
             contract_dict['Status'] =  dict(self._fields['state'].selection).get(self.state) 
         if self.contacr_term_month:
             contract_dict['ContractTerm'] = self.contacr_term_month
+        # if self.name:
+        #     contract_dict['Contract_Name__c'] = self.name
+        # if self.name:
+        #     contract_dict['Contract_Type__c'] = 'Onsite Event'
+
         result = self.sendDataToSf(contract_dict)
         if result:
             self.x_salesforce_exported = True
 
     @api.model
     def _scheduler_export_contracts_to_sf(self):
-        contracts = self.search([])
-        for contract in contracts:
-            try:
-                contract.exportContract_to_sf()
-            except Exception as e:
-                _logger.error('Oops Some error in  exporting contracts to SALESFORCE %s', e)
+        company_id = self.env.user.company_id
+        if company_id:
+            contracts = self.search([('write_date', '>', company_id.export_contract_lastmodifieddate)])
+            for contract in contracts:
+                try:
+                    contract.exportContract_to_sf()
+                except Exception as e:
+                    _logger.error('Oops Some error in  exporting contracts to SALESFORCE %s', e)

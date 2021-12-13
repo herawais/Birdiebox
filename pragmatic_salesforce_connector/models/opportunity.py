@@ -4,7 +4,7 @@ import logging
 import requests
 from odoo import fields, api, models, _
 from odoo.exceptions import UserError
-
+from datetime import datetime, timedelta
 _logger = logging.getLogger(__name__)
 
 
@@ -39,12 +39,15 @@ class CRMOpportunity(models.Model):
                 res = requests.request('PATCH', sf_config.sf_url + endpoint + '/' + self.x_salesforce_id_oppo, headers=headers, data=payload)
                 if res.status_code == 204:
                     self.x_is_updated_oppo = True
+                    self.env.user.company_id.export_opportunity_lastmodifieddate = datetime.today()
+
             else:
                 res = requests.request('POST', sf_config.sf_url + endpoint, headers=headers, data=payload)
                 if res.status_code in [200, 201]:
                     parsed_resp = json.loads(str(res.text))
                     self.x_salesforce_exported_oppo = True
                     self.x_salesforce_id_oppo = parsed_resp.get('id')
+                    self.env.user.company_id.export_opportunity_lastmodifieddate = datetime.today()
                     return parsed_resp.get('id')
                 else:
                     return False
@@ -80,9 +83,11 @@ class CRMOpportunity(models.Model):
 
     @api.model
     def _scheduler_export_opportunity_to_sf(self):
-        opportunities = self.search([])
-        for opportunity in opportunities:
-            try:
-                opportunity.exportOpportunity_to_sf()
-            except Exception as e:
-                _logger.error('Oops Some error in  exporting Opportunity to SALESFORCE %s', e)
+        company_id = self.env.user.company_id
+        if company_id:
+            opportunities = self.search([('write_date', '>', company_id.export_opportunity_lastmodifieddate)])
+            for opportunity in opportunities:
+                try:
+                    opportunity.exportOpportunity_to_sf()
+                except Exception as e:
+                    _logger.error('Oops Some error in  exporting Opportunity to SALESFORCE %s', e)

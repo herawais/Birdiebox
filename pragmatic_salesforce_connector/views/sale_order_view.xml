@@ -46,6 +46,17 @@
             <xpath expr="//field[@name='order_line']/form//field[@name='price_unit']" position="before">
                 <field name="custom_soline_salesforce_id" readonly="1"/>
             </xpath>
+
+            <field name="partner_id" position="attributes">
+                <attribute name="domain">
+                [('x_salesforce_id', '!=', False)]
+                </attribute>
+            </field>
+            <field name="partner_invoice_id" position="attributes">
+                <attribute name="domain">
+                [('x_salesforce_id', '!=', False)]
+                </attribute>
+            </field>
         </field>
     </record>
 </odoo>

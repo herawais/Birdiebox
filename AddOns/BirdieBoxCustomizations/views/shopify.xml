@@ -36,7 +36,7 @@
                         <group>
                             <field name="coupons" widget="one2many" nolabel="1" style="width: 100%;">
                                 <tree string="Coupons" editable="top">
-                                    <field name="code_prefix"   />
+                                    <field name="code_prefix"   string="Shipping Type Contains"/>
                                     <field name="partner_id" />
                                 </tree>
                             </field>

@@ -83,17 +83,17 @@ class CustomSaleOrder(models.Model):
                     raise Exception('There was an error creating the partner for this order in Odoo.\n ' + str(e))
 
             else:
-                order_coupons = order.get('discount_codes')
-                if not len(order_coupons):
-                      raise Exception('No coupon code found for this bulk order.')  
+                shipping_lines = order.get('shipping_lines')
+                if not len(shipping_lines):
+                      raise Exception('No Shipping Configuration found for this bulk order.')  
                 
-                for coupon in order_coupons:
+                for shipping_line in shipping_lines:
                     for shop_coupons in shop.coupons:
-                        if str(coupon.get('code')).lower().startswith(str(shop_coupons.code_prefix).lower()):
+                        if str(shop_coupons.code_prefix).lower() in str(shipping_line.get('code')).lower():
                             bulk_partner = shop_coupons.partner_id
                 
                 if not bulk_partner:
-                    raise Exception('Could not find a matching partner for this specified Shopify discount code.')
+                    raise Exception('Could not find a matching partner for the specified Shopify shipping selection.')
 
                 
                 customer_details = order.get('customer')

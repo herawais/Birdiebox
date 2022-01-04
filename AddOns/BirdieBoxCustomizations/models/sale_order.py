@@ -14,6 +14,25 @@ class CustomSaleOrder(models.Model):
 
     x_shopify_id = fields.Char('Shopify ID')
     
+    x_child_order_count = fields.Integer('Child Orders', compute="_compute_child_count")
+
+    @api.depends('name')
+    def _compute_child_count(self):
+        for record in self:
+            record.x_child_order_count = len(
+                self.env['sale.order'].search([('x_studio_related_sales_order', '=', record.id)]))
+    
+    def action_view_child_orders(self):
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _(str(self.name) + ' - Child Orders'),
+            'res_model': 'sale.order',
+            'view_mode': 'tree,form',
+            'domain': [('x_studio_related_sales_order', '=', self.id)],
+            'context': dict(self._context, create=False)
+        }
+    
     def action_confirm(self):
         if self.x_studio_shipping_type in ['Individual', 'Bulk - Parent'] and not self.x_studio_related_sales_order:
             self.state = 'sale'

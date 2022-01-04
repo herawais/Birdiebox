@@ -1,4 +1,18 @@
 <odoo>
+    <record model="ir.ui.view" id="view_sale_order_form_custom">
+        <field name="name">sale.order.form.custom</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//div[hasclass('oe_button_box')]" position="inside">
+                <button class="oe_stat_button" name="action_view_child_orders" icon="fa-clone"
+                    type="object" attrs="{'invisible': [('x_child_order_count', '=', 0)]}">
+                    <field name="x_child_order_count" string="Child Orders" widget="statinfo" />
+                </button>
+            </xpath>
+        </field>
+    </record>
+    
     <record id="view_order_sale_order_line_custom" model="ir.ui.view">
         <field name="name">sale.order.line.tree.custom</field>
         <field name="inherit_id" ref="sale.view_order_form"/>

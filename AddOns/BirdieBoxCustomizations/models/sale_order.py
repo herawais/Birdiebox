@@ -406,6 +406,34 @@ class CustomSaleOrderLine(models.Model):
         help="If this is selected all related orders will automatically get this product added when created."
     )
 
+    x_in_hand_date = fields.Datetime(
+        string='In Hand Date',
+        compute='_compute_in_hand',
+        store=True,
+        index=True
+    )
+
+    create_date = fields.Datetime(
+        index=True
+    )
+
+    product_id = fields.Many2one(
+        index=True
+    )
+
+    order_partner_id = fields.Many2one(
+        index=True
+    )
+
+    route_id = fields.Many2one(
+        index=True
+    )
+
+    @api.depends('order_id')
+    def _compute_in_hand(self):
+        for record in self:
+            record.x_in_hand_date = record.order_id.commitment_date
+
     def _action_launch_stock_rule(self, previous_product_uom_qty=False):
         try:
             if self.order_id.x_studio_shipping_type in ['Individual', 'Bulk - Parent'] and not self.order_id.x_studio_related_sales_order:

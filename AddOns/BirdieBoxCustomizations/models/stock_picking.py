@@ -103,6 +103,12 @@ class CustomStockPicking(models.Model):
 
         payload = {"shipping_labels": shipping_labels, "printer": printer}
 
+        try:
+            if len(self.package_ids):
+                payload["num_packages"] = len(self.package_ids)
+        except:
+            pass
+
         exp = (datetime.datetime.now() + datetime.timedelta(minutes=15))
 
         encoded_jwt = jwt.encode(

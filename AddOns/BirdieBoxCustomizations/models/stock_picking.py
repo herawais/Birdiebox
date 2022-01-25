@@ -105,7 +105,7 @@ class CustomStockPicking(models.Model):
 
         try:
             if len(self.package_ids):
-                payload["num_packages"] = len(self.package_ids)
+                payload["num_package"] = len(self.package_ids)
         except:
             pass
 

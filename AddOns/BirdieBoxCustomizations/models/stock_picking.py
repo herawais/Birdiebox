@@ -127,7 +127,7 @@ class CustomStockPicking(models.Model):
                 printer + "/shipping_label"
 
         response = requests.post(url,
-                                 timeout=10,
+                                #  timeout=10,
                                  headers={
                                      "Authorization":
                                      "Bearer " + encoded_jwt.decode("utf-8"),

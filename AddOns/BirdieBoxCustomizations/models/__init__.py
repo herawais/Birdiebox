@@ -10,3 +10,4 @@ from . import res_users
 from . import res_printers
 from . import shopify_configuration
 from . import shopify_order_logs
+from . import sales_dashboard

@@ -16,12 +16,12 @@ class ExternalSalesDashboard(models.Model):
     def update_sales_dashboard(self):
         sales_sql = """
            select so.id as sale_id,
-				so.name as sale_order, 
+                so.name as sale_order, 
                 r.name as customer, 
                 c.name as salesperson,
                 r2.name as account_manager,
                 so.commitment_date as in_hand_date, 
-                count(so1.id) as child_orders,
+                child.child_orders as child_orders,
                 sum(case when pickings.picking_type in ('Pick From Stock') and pickings.picking_state != 'done' then pickings.picking_count
                         else 0
                 end) as "Picked Remaining",
@@ -46,37 +46,46 @@ class ExternalSalesDashboard(models.Model):
                 sum(case when pickings.picking_type in ('Delivery Orders') and pickings.picking_state = 'done' then pickings.picking_count
                         else 0
                 end) as "Shipped Done"
-            from sale_order so,
-                res_partner r,
+            from res_partner r,
                 crm_team c,
                 res_users u,
                 res_partner r2,
-                sale_order so1
-            LEFT JOIN (select sp.sale_id as child_id,
-                            spt.name as picking_type,
-                            sp.state as picking_state,
-                            count(sp.id) as picking_count
+                sale_order so
+            LEFT JOIN (select so2.x_studio_related_sales_order as parent,
+                              spt.name as picking_type,
+                              sp.state as picking_state,
+                              count(sp.id) as picking_count
                     from stock_picking sp,
-                            stock_picking_type spt
+                         stock_picking_type spt,
+                         sale_order so2
                     where sp.sale_id is not null
                     and spt.id = sp.picking_type_id
                     and sp.state != 'cancel'
-                    group by sp.sale_id,
-                                spt.name,
-                                sp.state) as pickings on pickings.child_id = so1.id
-            where so.id = so1.x_studio_related_sales_order
-            and r.id = so.partner_id
-            and so1.state != 'cancel'
+                    and so2.id = sp.sale_id
+                    group by so2.x_studio_related_sales_order,
+                             spt.name,
+                             sp.state) as pickings on pickings.parent = so.id
+            LEFT JOIN (select so3.x_studio_related_sales_order as parent,
+                              count(so3.id) as child_orders
+                    from sale_order so3
+                    where so3.x_studio_related_sales_order is not null
+                    group by so3.x_studio_related_sales_order) as child on child.parent = so.id
+            where r.id = so.partner_id
             and so.state != 'cancel'
             and c.id = so.team_id
             and u.id = so.user_id
             and r2.id = u.partner_id
+            and exists
+            (select 'x'
+             from sale_order so4
+             where so4.x_studio_related_sales_order = so.id)
             group by so.id,
-					so.name, 
+                    so.name, 
                     r.name,
                     c.name,
                     r2.name,
-                    so.commitment_date
+                    so.commitment_date,
+                    child.child_orders
             order by 1,2,3
         """
 
